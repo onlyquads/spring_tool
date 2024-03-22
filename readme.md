@@ -17,9 +17,8 @@ to the end of the chain to set its scale
 first controller of the chain.
 4. Hit bake to simulate and bake the whole chain
 
-# NOTE:
-When previewing, you need to read timeline from its begining
-Tested on maya2022
+- Note: When previewing, you need to read timeline from its begining
+    Tested on maya2022
 
 # Presets:
 You can add presets for different parts of a character/prop to be reused.
@@ -27,8 +26,8 @@ That preset file can be shared accross team of artists. See installation
 instructions below.
 
 # Launch on-the-go:
-Copy/Paste the whole `spring_tool.py` code in maya python console and run
-Note: No presets UI will be shown if not fully installed and setup. See below
+Copy/Paste the whole `spring_tool.py` code in maya python console and run.
+- Note: No presets UI will be shown if not fully installed and setup. See below
 
 # Installation instructions :
 To install the Spring Tool for Maya, follow these steps:
