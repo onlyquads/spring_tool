@@ -40,18 +40,22 @@ To install the Spring Tool for Maya, follow these steps:
     | windows  | \Users\<username>\Documents\maya              |
     | mac os x | ~<username>/Library/Preferences/Autodesk/maya |
 
-2. Open presets.py and setup the different paths:
-
-    ```python
-    # Example
-    PROD_ROOT = "PROD_ROOT_ENV_STR"
-    JSON_PRESET_PATH = "documents/synced_folder/spring_presets"
-    JSON_FILENAME = "spring_tool_presets.json"
-    MAC_JSON_PRESET_PATH = "/Users/Username/Desktop/"
-    ```
-
-3. Launch Maya and run the following Python code in the Maya Script Editor or Python console to open the tool:
+2. Launch Maya and run the following Python code in the Maya Script Editor
+or Python console to open the tool:
    ```python
    from spring_tool import spring_tool
    window = spring_tool.SpringToolWindow()
+   window.show()
+
+To launch spring_tool with presets, you'll need to add path and filename
+to args. Example:
+
+   ```python
+   from spring_tool import spring_tool
+   prod_root_dir_path=None
+   presets_dir_path='/Users/Username/Desktop'
+   presets_filename='spring_tool_presets.json'
+   window = spring_tool.SpringToolWindow(
+    presets_dir_path=presets_dir_path,
+    presets_filename=presets_filename)
    window.show()

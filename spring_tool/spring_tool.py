@@ -30,22 +30,33 @@ NOTE: No presets UI will be shown if not fully installed and setup. See below
 To install the Spring Tool for Maya, follow these steps:
 
 1. Copy the entire `spring_tool` folder into your maya20XX/scripts directory.
-2. Open presets.py and setup the different paths.
-Example:
-    PROD_ROOT = 'PROD_ROOT_ENV_STR'
-    JSON_PRESET_PATH = 'documents/synced_folder/spring_presets'
-    JSON_FILENAME = 'spring_tool_presets.json'
-    MAC_JSON_PRESET_PATH = '/Users/Username/Desktop/'
-3. Launch Maya and run the following Python code in the Maya Script Editor
+
+2. Launch Maya and run the following Python code in the Maya Script Editor
 or Python console to open the tool:
    ```python
    from spring_tool import spring_tool
    window = spring_tool.SpringToolWindow()
    window.show()
+
+To launch spring_tool with presets, you'll need to add path and filename
+to args. Example:
+
+   ```python
+   from spring_tool import spring_tool
+   prod_root_dir_path=None
+   presets_dir_path='/Users/Username/Desktop'
+   presets_filename='spring_tool_presets.json'
+   window = spring_tool.SpringToolWindow(
+    presets_dir_path=presets_dir_path,
+    presets_filename=presets_filename)
+   window.show()
 '''
 
 
 import sys
+import os
+
+
 from functools import wraps
 from PySide2 import QtWidgets, QtCore
 from PySide2.QtWidgets import (
@@ -113,19 +124,191 @@ def disable_viewport(func):
     return wrap
 
 
+def get_presets_file_path(
+        prod_root_dir_path=None,
+        presets_dir_path=None,
+        presets_filename=None):
+
+    if not presets_dir_path:
+        return False
+
+    presets_path = os.path.normpath(presets_dir_path)
+    if prod_root_dir_path:
+        presets_path = os.path.normpath(
+            os.path.join(prod_root_dir_path, presets_path))
+
+    if not os.path.isdir(presets_path):
+        mc.warning('Preference dir is not found!')
+        return False
+
+    if not presets_filename:
+        presets_filename = 'spring_tool_presets.json'
+
+    presets_path = os.path.join(presets_path, presets_filename)
+
+    return presets_path
+
+
+class SavePresetPopup(QWidget):
+    def __init__(
+            self,
+            main_window,
+            presets_path,
+            spring_value,
+            rigidity_value,
+            decay_value,
+            position,
+            parent=None
+            ):
+        super().__init__(parent)
+        self.setWindowTitle("Save Preset")
+        self.main_window = main_window
+
+        self.presets_file_path = presets_path
+        self.presets = presets.load_presets(presets_path)
+        self.spring_value = spring_value
+        self.rigidity_value = rigidity_value
+        self.decay_value = decay_value
+        self.loc_position = position[0]
+        self.load_preset_popup_ui()
+
+    def load_preset_popup_ui(self):
+        layout = QVBoxLayout()
+
+        # Character Name
+        character_layout = QHBoxLayout()
+        character_label = QLabel("Character Name:")
+        self.character_line_edit = QLineEdit()
+        character_layout.addWidget(character_label)
+        character_layout.addWidget(self.character_line_edit)
+        layout.addLayout(character_layout)
+
+        # Body Part
+        body_part_layout = QHBoxLayout()
+        body_part_label = QLabel("Body part Name:")
+        self.body_part_line_edit = QLineEdit()
+        body_part_layout.addWidget(body_part_label)
+        body_part_layout.addWidget(self.body_part_line_edit)
+        layout.addLayout(body_part_layout)
+
+        # Spring
+        spring_layout = QHBoxLayout()
+        spring_label = QLabel("Spring:")
+        self.spring_spinbox = QDoubleSpinBox()
+        self.spring_spinbox.setRange(0.0, 1.0)
+        self.spring_spinbox.setSingleStep(0.01)
+        self.spring_spinbox.setValue(self.spring_value)
+        spring_layout.addWidget(spring_label)
+        spring_layout.addWidget(self.spring_spinbox)
+        layout.addLayout(spring_layout)
+
+        # Rigidity
+        rigidity_layout = QHBoxLayout()
+        rigidity_label = QLabel("Rigidity:")
+        self.rigidity_spinbox = QDoubleSpinBox()
+        self.rigidity_spinbox.setRange(0.0, 10.0)
+        self.rigidity_spinbox.setSingleStep(0.01)
+        self.rigidity_spinbox.setValue(self.rigidity_value)
+        rigidity_layout.addWidget(rigidity_label)
+        rigidity_layout.addWidget(self.rigidity_spinbox)
+        layout.addLayout(rigidity_layout)
+
+        # Decay
+        decay_layout = QHBoxLayout()
+        decay_label = QLabel("Decay:")
+        self.decay_spinbox = QDoubleSpinBox()
+        self.decay_spinbox.setSingleStep(0.01)
+        self.decay_spinbox.setRange(0.0, 10.0)
+        self.decay_spinbox.setValue(self.decay_value)
+        decay_layout.addWidget(decay_label)
+        decay_layout.addWidget(self.decay_spinbox)
+        layout.addLayout(decay_layout)
+
+        # Position
+        position_layout = QHBoxLayout()
+        position_label = QLabel('loc Pos (x,y,z):')
+        self.position_tx_spinbox = QDoubleSpinBox()
+        self.position_ty_spinbox = QDoubleSpinBox()
+        self.position_tz_spinbox = QDoubleSpinBox()
+        self.position_tx_spinbox.setMinimum(-999999)
+        self.position_ty_spinbox.setMinimum(-999999)
+        self.position_tz_spinbox.setMinimum(-999999)
+
+        self.position_tx_spinbox.setValue(self.loc_position[0])
+        self.position_ty_spinbox.setValue(self.loc_position[1])
+        self.position_tz_spinbox.setValue(self.loc_position[2])
+        position_layout.addWidget(position_label)
+        position_layout.addWidget(self.position_tx_spinbox)
+        position_layout.addWidget(self.position_ty_spinbox)
+        position_layout.addWidget(self.position_tz_spinbox)
+        layout.addLayout(position_layout)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        confirm_button = QPushButton("Confirm")
+        confirm_button.clicked.connect(self.save_preset_pressed)
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.close)
+        button_layout.addWidget(confirm_button)
+        button_layout.addWidget(cancel_button)
+        layout.addLayout(button_layout)
+        self.setLayout(layout)
+
+    def save_preset_pressed(self):
+        character_name = self.character_line_edit.text()
+        body_part = self.body_part_line_edit.text()
+        spring = self.spring_spinbox.value()
+        rigidity = self.rigidity_spinbox.value()
+        decay = self.decay_spinbox.value()
+        position_x = self.position_tx_spinbox.value()
+        position_y = self.position_ty_spinbox.value()
+        position_z = self.position_tz_spinbox.value()
+        position = [position_x, position_y, position_z]
+
+        print("Character Name:", character_name)
+        print("Body Part Name:", body_part)
+        print("Spring:", spring)
+        print("Rigidity:", rigidity)
+        print("Decay:", decay)
+        print("position", position)
+
+        presets.save_preset(
+            self.presets_file_path,
+            character_name,
+            body_part,
+            spring,
+            rigidity,
+            decay,
+            position)
+        self.main_window.refresh_characters_combobox()
+        self.close()
+
+
 class SpringToolWindow(QMainWindow):
 
-    def __init__(self, parent=None):
+    def __init__(
+            self,
+            parent=None,
+            prod_root_dir_path=None,
+            presets_dir_path=None,
+            presets_filename=None
+            ):
 
         if not parent:
             parent = maya_main_window()
         super(SpringToolWindow, self).__init__(parent=parent)
         self.setWindowTitle(TOOLNAME)
         self.setWindowFlags(QtCore.Qt.Tool)
-        self.setFixedWidth(300)
+        self.remove_setup_click_count = 0
+
+        self.presets_file_path = get_presets_file_path(
+            prod_root_dir_path,
+            presets_dir_path,
+            presets_filename
+        )
 
         self.ui_main()
-        if presets and presets.JSON_PRESET_PATH:
+        if presets and self.presets_file_path:
             self.ui_presets()
 
         self.master_scale = 1.0
@@ -296,6 +479,7 @@ class SpringToolWindow(QMainWindow):
     def handle_locators_btn_clicked(self):
         self.rig_ctl_list = mc.ls(selection=True, tr=True)
         if not self.rig_ctl_list:
+            mc.warning('Nothing selected, please select at least 1 object')
             return
         if mc.objExists(AIM_GRP_NAME):
             return mc.warning('Locator already in scene. Delete setup first')
@@ -327,12 +511,16 @@ class SpringToolWindow(QMainWindow):
         [mc.delete(obj) for obj in obj_name_list if mc.objExists(f'{obj}*')]
 
     def clear_all(self):
+        self.remove_setup_click_count += 1
+        if self.remove_setup_click_count == 2:
+            self.rig_ctl_list = []
+            self.aim_loc = None
+            self.axes = None
+            self.spring_value_spinbox.setValue(DEFAULT_SPRING_VALUE)
+            self.decay_value_spinbox.setValue(DEFAULT_DECAY_VALUE)
+            self.remove_setup_click_count = 0
+            return
         self.remove_setup()
-        self.rig_ctl_list = []
-        self.aim_loc = None
-        self.axes = None
-        self.spring_value_spinbox.setValue(DEFAULT_SPRING_VALUE)
-        self.decay_value_spinbox.setValue(DEFAULT_DECAY_VALUE)
 
     def refresh_characters_combobox(self):
         '''
@@ -340,7 +528,8 @@ class SpringToolWindow(QMainWindow):
         populate it.
         '''
         self.character_combo.clear()
-        saved_char_list = presets.get_available_characters()
+        saved_char_list = presets.get_available_characters(
+            self.presets_file_path)
         if not saved_char_list:
             return
         for char in saved_char_list:
@@ -352,7 +541,8 @@ class SpringToolWindow(QMainWindow):
         '''refresh the available body parts in UI list'''
         self.body_parts_list.clear()
         current_character = self.character_combo.currentText()
-        saved_presets = presets.get_available_body_parts(current_character)
+        saved_presets = presets.get_available_body_parts(
+            self.presets_file_path, current_character)
         if not saved_presets:
             return
         if saved_presets is not None:
@@ -377,15 +567,17 @@ class SpringToolWindow(QMainWindow):
         show the save preset popup window.
         Store existing main UI's values and pass it to the popup window
         '''
-        if not presets.get_pref_file_path():
+        if not self.presets_file_path:
             return mc.warning(
-                'Path to presets not set/found. Check path setup in preset.py')
+                'Path to presets not set/found.')
         spring_value = self.spring_value_spinbox.value()
         rigidity_value = self.rigidity_value_spinbox.value()
         decay_value = self.decay_value_spinbox.value()
         position = self.get_aim_loc_position()
 
         self.preset_window = SavePresetPopup(
+            self,
+            self.presets_file_path,
             spring_value,
             rigidity_value,
             decay_value,
@@ -398,7 +590,11 @@ class SpringToolWindow(QMainWindow):
         Sets the values from the selected preset in list
         '''
         character_name = self.character_combo.currentText()
-        preset_values = presets.get_preset(character_name, preset.text())
+        preset_values = presets.get_preset(
+            self.presets_file_path,
+            character_name,
+            preset.text()
+            )
         spring_value = preset_values['spring_value']
         spring_rigidity = preset_values['spring_rigidity']
         decay = preset_values['decay']
@@ -617,128 +813,6 @@ class SpringToolWindow(QMainWindow):
             self.bake_ctl(current_ctl=selected_rig_ctl[i])
         mc.warning('Spring COMPLETED !')
         self.switch_back_vp_eval(vp_eval)
-
-
-class SavePresetPopup(QWidget):
-    def __init__(self, spring_value, rigidity_value, decay_value, position):
-        super(SavePresetPopup, self).__init__()
-        self.setWindowTitle("Save Preset")
-
-        self.presets = presets.load_presets()
-        self.spring_value = spring_value
-        self.rigidity_value = rigidity_value
-        self.decay_value = decay_value
-        self.loc_position = position[0]
-        self.load_preset_popup_ui()
-
-    def load_preset_popup_ui(self):
-        layout = QVBoxLayout()
-
-        # Character Name
-        character_layout = QHBoxLayout()
-        character_label = QLabel("Character Name:")
-        self.character_line_edit = QLineEdit()
-        character_layout.addWidget(character_label)
-        character_layout.addWidget(self.character_line_edit)
-        layout.addLayout(character_layout)
-
-        # Body Part
-        body_part_layout = QHBoxLayout()
-        body_part_label = QLabel("Body part Name:")
-        self.body_part_line_edit = QLineEdit()
-        body_part_layout.addWidget(body_part_label)
-        body_part_layout.addWidget(self.body_part_line_edit)
-        layout.addLayout(body_part_layout)
-
-        # Spring
-        spring_layout = QHBoxLayout()
-        spring_label = QLabel("Spring:")
-        self.spring_spinbox = QDoubleSpinBox()
-        self.spring_spinbox.setRange(0.0, 1.0)
-        self.spring_spinbox.setSingleStep(0.01)
-        self.spring_spinbox.setValue(self.spring_value)
-        spring_layout.addWidget(spring_label)
-        spring_layout.addWidget(self.spring_spinbox)
-        layout.addLayout(spring_layout)
-
-        # Rigidity
-        rigidity_layout = QHBoxLayout()
-        rigidity_label = QLabel("Rigidity:")
-        self.rigidity_spinbox = QDoubleSpinBox()
-        self.rigidity_spinbox.setRange(0.0, 10.0)
-        self.rigidity_spinbox.setSingleStep(0.01)
-        self.rigidity_spinbox.setValue(self.rigidity_value)
-        rigidity_layout.addWidget(rigidity_label)
-        rigidity_layout.addWidget(self.rigidity_spinbox)
-        layout.addLayout(rigidity_layout)
-
-        # Decay
-        decay_layout = QHBoxLayout()
-        decay_label = QLabel("Decay:")
-        self.decay_spinbox = QDoubleSpinBox()
-        self.decay_spinbox.setSingleStep(0.01)
-        self.decay_spinbox.setRange(0.0, 10.0)
-        self.decay_spinbox.setValue(self.decay_value)
-        decay_layout.addWidget(decay_label)
-        decay_layout.addWidget(self.decay_spinbox)
-        layout.addLayout(decay_layout)
-
-        # Position
-        position_layout = QHBoxLayout()
-        position_label = QLabel('loc Pos (x,y,z):')
-        self.position_tx_spinbox = QDoubleSpinBox()
-        self.position_ty_spinbox = QDoubleSpinBox()
-        self.position_tz_spinbox = QDoubleSpinBox()
-        self.position_tx_spinbox.setMinimum(-999999)
-        self.position_ty_spinbox.setMinimum(-999999)
-        self.position_tz_spinbox.setMinimum(-999999)
-
-        self.position_tx_spinbox.setValue(self.loc_position[0])
-        self.position_ty_spinbox.setValue(self.loc_position[1])
-        self.position_tz_spinbox.setValue(self.loc_position[2])
-        position_layout.addWidget(position_label)
-        position_layout.addWidget(self.position_tx_spinbox)
-        position_layout.addWidget(self.position_ty_spinbox)
-        position_layout.addWidget(self.position_tz_spinbox)
-        layout.addLayout(position_layout)
-
-        # Buttons
-        button_layout = QHBoxLayout()
-        confirm_button = QPushButton("Confirm")
-        confirm_button.clicked.connect(self.save_preset_pressed)
-        cancel_button = QPushButton("Cancel")
-        cancel_button.clicked.connect(self.close)
-        button_layout.addWidget(confirm_button)
-        button_layout.addWidget(cancel_button)
-        layout.addLayout(button_layout)
-        self.setLayout(layout)
-
-    def save_preset_pressed(self):
-        character_name = self.character_line_edit.text()
-        body_part = self.body_part_line_edit.text()
-        spring = self.spring_spinbox.value()
-        rigidity = self.rigidity_spinbox.value()
-        decay = self.decay_spinbox.value()
-        position_x = self.position_tx_spinbox.value()
-        position_y = self.position_ty_spinbox.value()
-        position_z = self.position_tz_spinbox.value()
-        position = [position_x, position_y, position_z]
-
-        print("Character Name:", character_name)
-        print("Body Part Name:", body_part)
-        print("Spring:", spring)
-        print("Rigidity:", rigidity)
-        print("Decay:", decay)
-        print("position", position)
-
-        presets.save_preset(
-            character_name,
-            body_part,
-            spring,
-            rigidity,
-            decay,
-            position)
-        self.close()
 
 
 if __name__ == '__main__':
