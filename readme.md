@@ -44,7 +44,7 @@ To install the Spring Tool for Maya, follow these steps:
 
     ```python
     # Example
-    PROD_NIMBLE_ROOT = "PROD_ROOT_ENV_STR"
+    PROD_ROOT = "PROD_ROOT_ENV_STR"
     JSON_PRESET_PATH = "documents/synced_folder/spring_presets"
     JSON_FILENAME = "spring_tool_presets.json"
     MAC_JSON_PRESET_PATH = "/Users/Username/Desktop/"

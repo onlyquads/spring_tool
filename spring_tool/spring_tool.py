@@ -32,7 +32,7 @@ To install the Spring Tool for Maya, follow these steps:
 1. Copy the entire `spring_tool` folder into your maya20XX/scripts directory.
 2. Open presets.py and setup the different paths.
 Example:
-    PROD_NIMBLE_ROOT = 'PROD_ROOT_ENV_STR'
+    PROD_ROOT = 'PROD_ROOT_ENV_STR'
     JSON_PRESET_PATH = 'documents/synced_folder/spring_presets'
     JSON_FILENAME = 'spring_tool_presets.json'
     MAC_JSON_PRESET_PATH = '/Users/Username/Desktop/'
