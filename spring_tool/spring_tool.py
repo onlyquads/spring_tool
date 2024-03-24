@@ -125,7 +125,7 @@ class SpringToolWindow(QMainWindow):
         self.setFixedWidth(300)
 
         self.ui_main()
-        if presets:
+        if presets and presets.JSON_PRESET_PATH:
             self.ui_presets()
 
         self.master_scale = 1.0
