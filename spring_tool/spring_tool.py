@@ -41,7 +41,11 @@ or Python console to open the tool without presets functions:
    window.show()
 
 To launch spring_tool with presets functions, you'll need to add
-path and filename to args. Example:
+path and filename to args.
+If you work in team, make sure the presets file is in a shared directory sothat
+everyone can get and add presets.
+
+Example:
 
 ```python
 from spring_tool import spring_tool

@@ -6,7 +6,9 @@ https://luismiherrera.gumroad.com/
 Rewritten using Qt and python3 with better perferomances in bake process.
 A preset system has been added, see the presets section
 
-<img src="https://garcia-nicolas.com/wp-content/uploads/2024/03/spring_tool_screenshot.png" alt="spring tool ui screenshot" width="300"/>
+<div style="text-align: center;">
+    <img src="https://garcia-nicolas.com/wp-content/uploads/2024/03/spring_tool_screenshot.png" alt="spring tool ui screenshot" width="300"/>
+</div>
 
 # How to use:
 Works only for rotations.
@@ -23,9 +25,10 @@ first controller of the chain.
 # Presets:
 You can add presets for different parts of a character/prop to be reused.
 That preset file can be shared accross team of artists.
+<p><b>Magic trick:</b>
 Using presets, you'll be able to launch the whole sim and bake process
-by right clicking any preset and 'Do Magic!' menu.
-See installation instructions below.
+by right clicking any preset and 'Do Magic!' menu.</p>
+<p>See installation instructions below.</p>
 
 
 # Launch on-the-go:
@@ -53,6 +56,8 @@ or Python console to open the tool without presets functions:
 
 To launch spring_tool with presets functions, you'll need to add path and filename
 to args.
+If you work in team, make sure the presets file is in a shared directory sothat
+everyone can get and add presets.
 
 Example:
 
