@@ -38,13 +38,13 @@ or Python console to open the tool without presets functions:
    window = spring_tool.SpringToolWindow()
    window.show()
 
-To launch spring_tool with presets functions, you'll need to add path and filename
-to args. Example:
+To launch spring_tool with presets functions, you'll need to add
+path and filename to args. Example:
 
 ```python
 from spring_tool import spring_tool
 window = spring_tool.SpringToolWindow(
-    prod_root_dir_path = None,  # can be usefull if you work with environments
+    prod_root_env_name = None,  # can be usefull if you work with environments
     presets_dir_path='/Users/Username/Desktop',
     presets_filename='spring_tool_presets.json'
     )
@@ -61,12 +61,13 @@ from PySide2 import QtWidgets, QtCore
 from PySide2.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
     QDoubleSpinBox, QSlider, QLabel, QRadioButton, QComboBox,
-    QLineEdit, QListWidget)
+    QLineEdit, QListWidget, QAction, QMenu)
 import maya.cmds as mc
 import maya.mel as mm
 
 try:
     from spring_tool import presets
+    print('spring tool presets found')
 except ImportError:
     presets = None
 
@@ -124,7 +125,7 @@ def disable_viewport(func):
 
 
 def get_presets_file_path(
-        prod_root_dir_path=None,
+        prod_root_env_name=None,
         presets_dir_path=None,
         presets_filename=None):
 
@@ -132,9 +133,9 @@ def get_presets_file_path(
         return False
 
     presets_path = os.path.normpath(presets_dir_path)
-    if prod_root_dir_path:
+    if prod_root_env_name:
         presets_path = os.path.normpath(
-            os.path.join(prod_root_dir_path, presets_path))
+            os.path.join(os.environ.get(prod_root_env_name), presets_path))
 
     if not os.path.isdir(presets_path):
         mc.warning('Preference dir is not found!')
@@ -144,7 +145,6 @@ def get_presets_file_path(
         presets_filename = 'spring_tool_presets.json'
 
     presets_path = os.path.join(presets_path, presets_filename)
-
     return presets_path
 
 
@@ -288,7 +288,7 @@ class SpringToolWindow(QMainWindow):
     def __init__(
             self,
             parent=None,
-            prod_root_dir_path=None,
+            prod_root_env_name=None,
             presets_dir_path=None,
             presets_filename=None
             ):
@@ -301,7 +301,7 @@ class SpringToolWindow(QMainWindow):
         self.remove_setup_click_count = 0
 
         self.presets_file_path = get_presets_file_path(
-            prod_root_dir_path,
+            prod_root_env_name,
             presets_dir_path,
             presets_filename
         )
@@ -427,7 +427,14 @@ class SpringToolWindow(QMainWindow):
         save_preset_button = QPushButton('Save Preset')
         save_preset_button.clicked.connect(self.show_save_preset_popup)
 
+        self.body_parts_list_menu = QMenu()
+        do_magic_action = QAction("Do Magic!", self)
         self.body_parts_list = QListWidget()
+        # Handle right click on QMenuList item
+        self.body_parts_list.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.body_parts_list.customContextMenuRequested.connect(self.show_menu)
+        self.body_parts_list_menu.addAction(do_magic_action)
+        do_magic_action.triggered.connect(self.launch_all)
         self.body_parts_list.setFixedHeight(133)
 
         # Populate the combo-box and list
@@ -440,6 +447,16 @@ class SpringToolWindow(QMainWindow):
 
         self.main_split_layout.addLayout(self.presets_main_layout, 1)
         self.presets_main_layout.addStretch()
+
+    def showEvent(self, event):
+        # Make window width and height to minimum and lock resizability
+        super().showEvent(event)
+        self.setFixedWidth(self.minimumWidth())
+        self.setFixedHeight(self.minimumHeight())
+
+    def show_menu(self, position):
+        position = self.body_parts_list.mapToGlobal(position)
+        self.body_parts_list_menu.exec_(position)
 
     def spring_value_changed(self):
         self.spring_value_qslider.blockSignals(True)
@@ -547,6 +564,20 @@ class SpringToolWindow(QMainWindow):
         if saved_presets is not None:
             self.body_parts_list.addItems(saved_presets)
 
+    def launch_all(self):
+        '''
+        Launch the whole process automatically from selected preset using right
+        click. Need to have the controllers selected in viewport.
+        '''
+        self.rig_ctl_list = mc.ls(selection=True)
+        if not self.rig_ctl_list:
+            mc.warning('Please select at least one object')
+            return
+        self.create_locators(self.rig_ctl_list)
+        self.set_values_from_preset()
+        self.setup_live_preview(self.rig_ctl_list)
+        self.launch_bake()
+
     def get_aim_loc_position(self):
         '''
         Return the current position X, Y, Z of the aim locator
@@ -584,15 +615,17 @@ class SpringToolWindow(QMainWindow):
             )
         self.preset_window.show()
 
-    def set_values_from_preset(self, preset):
+    def set_values_from_preset(self):
         '''
         Sets the values from the selected preset in list
         '''
         character_name = self.character_combo.currentText()
+        selected_items = self.body_parts_list.selectedItems()
+        preset_text = selected_items[0].text()
         preset_values = presets.get_preset(
             self.presets_file_path,
             character_name,
-            preset.text()
+            preset_text
             )
         spring_value = preset_values['spring_value']
         spring_rigidity = preset_values['spring_rigidity']
