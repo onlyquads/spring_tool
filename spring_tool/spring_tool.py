@@ -460,7 +460,7 @@ class SpringToolWindow(QMainWindow):
         self.presets_main_layout.addStretch()
 
     def showEvent(self, event):
-        # Make window width and height to minimum and lock resizability
+        # Set window width and height to minimum and lock resizability
         super().showEvent(event)
         self.setFixedWidth(self.minimumWidth())
         self.setFixedHeight(self.minimumHeight())
