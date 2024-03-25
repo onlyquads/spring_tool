@@ -19,8 +19,10 @@ Tested on maya2022
 
 # Presets:
 You can add presets for different parts of a character/prop to be reused.
-That preset file can be shared accross team of artists. See installation
-instructions below.
+That preset file can be shared accross team of artists.
+Using presets, you'll be able to launch the whole sim and bake process
+by right clicking any preset and 'Do Magic!' menu.
+See installation instructions below.
 
 # Launch on-the-go:
 Copy/Paste this whole page of code in maya python console and run.
@@ -49,6 +51,11 @@ window = spring_tool.SpringToolWindow(
     presets_filename='spring_tool_presets.json'
     )
 window.show()
+
+
+- Note: 'prod_root_env_name' will be sent as string in
+'os.environ.get(prod_root_env_name)' in 'get_presets_file_path' function.
+
 '''
 
 

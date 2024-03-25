@@ -22,8 +22,11 @@ first controller of the chain.
 
 # Presets:
 You can add presets for different parts of a character/prop to be reused.
-That preset file can be shared accross team of artists. See installation
-instructions below.
+That preset file can be shared accross team of artists.
+Using presets, you'll be able to launch the whole sim and bake process
+by right clicking any preset and 'Do Magic!' menu.
+See installation instructions below.
+
 
 # Launch on-the-go:
 Copy/Paste the whole `spring_tool.py` code in maya python console and run.
@@ -49,15 +52,18 @@ or Python console to open the tool without presets functions:
    ```
 
 To launch spring_tool with presets functions, you'll need to add path and filename
-to args. Example:
+to args.
+
+Example:
 
 ```python
 from spring_tool import spring_tool
 window = spring_tool.SpringToolWindow(
-    prod_root_dir_path = None,  # can be usefull if you work with environments
+    prod_root_env_name = None,  # can be usefull if you work with environments
     presets_dir_path='/Users/Username/Desktop',
     presets_filename='spring_tool_presets.json'
     )
 window.show()
 ```
+- Note: 'prod_root_env_name' will be sent as string in 'os.environ.get(prod_root_env_name)' in 'get_presets_file_path' function.
 
