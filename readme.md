@@ -10,10 +10,12 @@ A preset system has been added, see the presets section
     <img src="https://garcia-nicolas.com/wp-content/uploads/2024/03/spring_tool_screenshot.png" alt="spring tool ui screenshot" width="300"/>
 </div>
 
-<div style="text-align: center;">
-    <img src="" width="300"/>
+<video width="640" height="360" controls>
+  <source src="https://garcia-nicolas.com/wp-content/uploads/2024/03/spring_tool_tuto.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
 </div>
-[Link to Video](https://garcia-nicolas.com/wp-content/uploads/2024/03/spring_tool_tuto.mp4")
+
 
 # How to use:
 Works only for rotations.
