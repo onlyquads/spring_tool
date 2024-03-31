@@ -11,9 +11,9 @@ A preset system has been added, see the presets section
 </div>
 
 <div style="text-align: center;">
-    <img src="https://garcia-nicolas.com/wp-content/uploads/2024/03/spring_tool_tuto.mp4" alt="spring tool ui screenshot" width="300"/>
+    <img src="" width="300"/>
 </div>
-
+[Link to Video](https://garcia-nicolas.com/wp-content/uploads/2024/03/spring_tool_tuto.mp4")
 
 # How to use:
 Works only for rotations.
