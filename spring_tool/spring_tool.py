@@ -2,7 +2,7 @@
 # Description:
 Based on Luismi Herrera's logic of LMspring:
 https://luismiherrera.gumroad.com/.
-Fully rewritten using Qt and python3 with better perferomances in bake process.
+Fully rewritten using Qt and python3 with better performances in bake process.
 A preset system has been added, see the presets section
 
 # How to use:
@@ -168,19 +168,27 @@ class SavePresetPopup(QWidget):
             rigidity_value,
             decay_value,
             position,
-            parent=None
+            parent=None,
+            char_name=None,
+            body_part=None,
+            edit_mode=False,
             ):
-        super().__init__(parent)
+        super().__init__(parent=parent)
         self.setWindowTitle("Save Preset")
-        self.main_window = main_window
 
+        self.main_window = main_window
         self.presets_file_path = presets_path
         self.presets = presets.load_presets(presets_path)
         self.spring_value = spring_value
         self.rigidity_value = rigidity_value
         self.decay_value = decay_value
         self.loc_position = position[0]
+        self.edit_mode = edit_mode
         self.load_preset_popup_ui()
+        if char_name:
+            self.character_line_edit.setText(char_name)
+        if body_part:
+            self.body_part_line_edit.setText(body_part)
 
     def load_preset_popup_ui(self):
         layout = QVBoxLayout()
@@ -282,14 +290,15 @@ class SavePresetPopup(QWidget):
         print("Decay:", decay)
         print("position", position)
 
-        presets.save_preset(
-            self.presets_file_path,
-            character_name,
-            body_part,
-            spring,
-            rigidity,
-            decay,
-            position)
+        if not self.edit_mode:
+            presets.save_preset(
+                self.presets_file_path,
+                character_name,
+                body_part,
+                spring,
+                rigidity,
+                decay,
+                position)
         self.main_window.refresh_characters_combobox()
         self.close()
 
@@ -534,8 +543,10 @@ class SpringToolWindow(QMainWindow):
         return locked_attr_list
 
     def remove_setup(self):
+        mc.undoInfo(ock=True)
         obj_name_list = [TOOLNAME, AIM_GRP_NAME]
         [mc.delete(obj) for obj in obj_name_list if mc.objExists(f'{obj}*')]
+        mc.undoInfo(cck=True)
 
     def clear_all(self):
         self.remove_setup_click_count += 1
@@ -649,6 +660,7 @@ class SpringToolWindow(QMainWindow):
         self.move_to_pref_position(position)
 
     def create_locators(self, selected_rig_ctl_list):
+        mc.undoInfo(ock=True)
         self.rig_ctl_list = []
         self.rig_ctl_list = sorted(selected_rig_ctl_list)
         aim_loc_grp = mc.group(name=AIM_GRP_NAME, empty=True)
@@ -658,6 +670,7 @@ class SpringToolWindow(QMainWindow):
         mc.parentConstraint(self.rig_ctl_list[0], aim_loc_grp, mo=True)
         self.aim_loc = mc.spaceLocator(name='SPTL_Aim_loc')
         mc.parent(self.aim_loc, aim_loc_grp, relative=True)
+        mc.undoInfo(cck=True)
 
     def align_locator(self):
         mc.setAttr(f'{self.aim_loc[0]}.t', *self.axes)
@@ -719,7 +732,7 @@ class SpringToolWindow(QMainWindow):
 
     @disable_viewport
     def setup_live_preview(self, rig_ctl_list, spring_weight=None):
-
+        mc.undoInfo(ock=True)
         if mc.objExists(TOOLNAME):
             return mc.warning('Live preview already set')
         # ROTATION MODE - AFFECT ONLY ROTATION ATTRIBUTES
@@ -778,6 +791,7 @@ class SpringToolWindow(QMainWindow):
             skip=locked_rot_attr_list,
             )
         mc.setAttr(f'{PARTICLE_NAME}.startFrame', frame_in)
+        mc.undoInfo(cck=True)
 
     def move_to_pref_position(self, position):
         '''
@@ -830,6 +844,7 @@ class SpringToolWindow(QMainWindow):
 
     @disable_viewport
     def launch_bake(self):
+        mc.undoInfo(ock=True)
 
         if not mc.objExists(TOOLNAME):
             mc.warning('No Live Preview setup found, use Live Preview first')
@@ -856,6 +871,7 @@ class SpringToolWindow(QMainWindow):
             self.bake_ctl(current_ctl=selected_rig_ctl[i])
         mc.warning('Spring COMPLETED !')
         self.switch_back_vp_eval(vp_eval)
+        mc.undoInfo(cck=True)
 
 
 if __name__ == '__main__':

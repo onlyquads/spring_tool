@@ -3,7 +3,7 @@ Maya auto spring tool script.
 Based on Luismi Herrera's logic of LMspring:
 https://luismiherrera.gumroad.com/
 
-Rewritten using Qt and python3 with better perferomances in bake process.
+Rewritten using Qt and python3 with better performances in bake process.
 A preset system has been added, see the presets section
 
 <div style="text-align: center;">
