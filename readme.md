@@ -10,7 +10,7 @@ A preset system has been added, see the presets section
     <img src="https://garcia-nicolas.com/wp-content/uploads/2024/03/spring_tool_screenshot.png" alt="spring tool ui screenshot" width="300"/>
 </div>
 
-[Link to quick tutorial Video]([https://garcia-nicolas.com/wp-content/uploads/2024/03/spring_tool_tuto.mp4](https://garcia-nicolas.com/download/3147/?tmstv=1713513016&v=3148))
+[Link to quick tutorial Video](https://garcia-nicolas.com/download/3147/?tmstv=1713513016&v=3148)
 
 # How to use:
 Works only for rotations.
