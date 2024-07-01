@@ -787,7 +787,7 @@ class SpringToolWindow(QMainWindow):
             worldUpVector=up_vector,
             worldUpObject=(ctl_locator[0]),
             worldUpType='objectrotation',
-            mo=False,
+            mo=True,
             skip=locked_rot_attr_list,
             )
         mc.setAttr(f'{PARTICLE_NAME}.startFrame', frame_in)
