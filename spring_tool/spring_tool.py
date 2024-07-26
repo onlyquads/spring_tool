@@ -173,9 +173,11 @@ class SavePresetPopup(QWidget):
             body_part=None,
             edit_mode=False,
             ):
-        super().__init__(parent=parent)
-        self.setWindowTitle("Save Preset")
 
+        super().__init__(parent=parent)
+
+        self.setWindowTitle("Save Preset")
+        self.setWindowModality(QtCore.Qt.ApplicationModal)
         self.main_window = main_window
         self.presets_file_path = presets_path
         self.presets = presets.load_presets(presets_path)
@@ -313,8 +315,6 @@ class SpringToolWindow(QMainWindow):
             presets_filename=None
             ):
 
-        if not parent:
-            parent = maya_main_window()
         super(SpringToolWindow, self).__init__(parent=parent)
         self.setWindowTitle(TOOLNAME)
         self.setWindowFlags(QtCore.Qt.Tool)
@@ -544,7 +544,15 @@ class SpringToolWindow(QMainWindow):
 
     def remove_setup(self):
         mc.undoInfo(ock=True)
-        obj_name_list = [TOOLNAME, AIM_GRP_NAME]
+        obj_name_list = (
+            [
+                TOOLNAME,
+                AIM_GRP_NAME,
+                PARTICLE_NAME,
+                LOCATOR_NAME,
+                CTL_LOCATOR
+            ]
+            )
         [mc.delete(obj) for obj in obj_name_list if mc.objExists(f'{obj}*')]
         mc.undoInfo(cck=True)
 
@@ -633,7 +641,7 @@ class SpringToolWindow(QMainWindow):
             spring_value,
             rigidity_value,
             decay_value,
-            position,
+            position
             )
         self.preset_window.show()
 
