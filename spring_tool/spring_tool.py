@@ -340,6 +340,8 @@ class SpringToolWindow(QMainWindow):
         Main part of the tool, left UI panel
         '''
         central_widget = QWidget(self)
+        self.setCentralWidget(central_widget)
+
         self.main_split_layout = QHBoxLayout(central_widget)
         self.main_layout = QVBoxLayout()
 
@@ -349,9 +351,9 @@ class SpringToolWindow(QMainWindow):
         self.previz_button = QPushButton('2. Live preview')
         self.previz_button.clicked.connect(self.handle_previz_btn_clicked)
 
-        weight_layout = QHBoxLayout(central_widget)
-        decay_layout = QHBoxLayout(central_widget)
-        rigidity_layout = QHBoxLayout(central_widget)
+        weight_layout = QHBoxLayout()
+        decay_layout = QHBoxLayout()
+        rigidity_layout = QHBoxLayout()
 
         spring_qlabel = QLabel('Spring')
         self.spring_value_spinbox = QDoubleSpinBox()
@@ -430,7 +432,6 @@ class SpringToolWindow(QMainWindow):
         self.main_layout.addWidget(self.remove_setup_button)
         self.main_layout.addStretch()
         self.main_split_layout.addLayout(self.main_layout, 2)
-        self.setCentralWidget(central_widget)
 
     def ui_presets(self):
         '''
