@@ -315,7 +315,10 @@ class SpringToolWindow(QMainWindow):
             presets_filename=None
             ):
 
+        if not parent:
+            parent = maya_main_window()
         super(SpringToolWindow, self).__init__(parent=parent)
+
         self.setWindowTitle(TOOLNAME)
         self.setWindowFlags(QtCore.Qt.Tool)
         self.remove_setup_click_count = 0
