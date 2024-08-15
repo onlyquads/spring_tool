@@ -7,7 +7,7 @@ Rewritten using Qt and python3 with better performances in bake process.
 A preset system has been added, see the presets section
 
 <div style="text-align: center;">
-    <img src="https://garcia-nicolas.com/wp-content/uploads/2024/03/spring_tool_screenshot.png" alt="spring tool ui screenshot" width="300"/>
+    <img src="https://garcia-nicolas.com/wp-content/uploads/2024/08/Screenshot-2024-08-15-190229.png" alt="spring tool ui screenshot" width="300"/>
 </div>
 
 [Link to quick tutorial Video](https://garcia-nicolas.com/download/3147/?tmstv=1713513016&v=3148)
@@ -68,9 +68,32 @@ from spring_tool import spring_tool
 window = spring_tool.SpringToolWindow(
     prod_root_env_name = None,  # can be usefull if you work with environments
     presets_dir_path='/Users/Username/Desktop',
-    presets_filename='spring_tool_presets.json'
+    presets_filename='spring_tool_presets.json',
+    lock_write_presets=False  # can be used to prevent users to add presets
     )
 window.show()
 ```
 - Note: 'prod_root_env_name' will be sent as string in 'os.environ.get(prod_root_env_name)' in 'get_presets_file_path' function.
 
+# Launch Administration instructions :
+There is an administration window that might be helpful to tweak, rename or delete any preset created.
+
+<div style="text-align: center;">
+    <img src="https://garcia-nicolas.com/wp-content/uploads/2024/08/Screenshot-2024-08-15-190253.png" alt="spring tool admin ui screenshot" width="300"/>
+</div>
+
+
+
+To launch it run this python command:
+
+```python
+from spring_tool import spring_tool
+from spring_tool import presets_admin
+window = presets_admin.SpringToolPresetAdmin(
+    prod_root_env_name=None, # can be usefull if you work with environments
+    presets_dir_path="/Users/Username/Desktop",
+    presets_filename="spring_tool_presets.json",
+    authorized_access=True,  # Set this to False if you want to prevent users to access the administration window
+    )
+window.show()
+```
