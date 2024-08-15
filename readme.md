@@ -87,7 +87,6 @@ There is an administration window that might be helpful to tweak, rename or dele
 To launch it run this python command:
 
 ```python
-from spring_tool import spring_tool
 from spring_tool import presets_admin
 window = presets_admin.SpringToolPresetAdmin(
     prod_root_env_name=None, # can be usefull if you work with environments

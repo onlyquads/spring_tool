@@ -60,6 +60,23 @@ window.show()
 - Note: 'prod_root_env_name' will be sent as string in
 'os.environ.get(prod_root_env_name)' in 'get_presets_file_path' function.
 
+# Launch Administration instructions :
+There is an administration window that might be helpful to tweak, rename or
+delete any preset created.
+
+To launch it run this python command:
+
+```python
+from spring_tool import presets_admin
+window = presets_admin.SpringToolPresetAdmin(
+    prod_root_env_name=None, # can be usefull if you work with environments
+    presets_dir_path="/Users/Username/Desktop",
+    presets_filename="spring_tool_presets.json",
+    authorized_access=True,  # Set to False to restrict access to the window
+    )
+window.show()
+```
+
 '''
 
 
