@@ -5,43 +5,13 @@ This part is still wip. Presets will show up but edition doesn't work
 from PySide2 import QtCore
 from PySide2.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
-    QTreeView, QMessageBox)
+    QTreeView)
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from spring_tool.spring_tool import (
     TOOLNAME, maya_main_window)
 from spring_tool import presets
 import maya.cmds as mc
 import json
-
-
-def show_error_message(message):
-    error_dialog = QMessageBox()
-    error_dialog.setText(message)
-    error_dialog.setIcon(QMessageBox.Critical)
-    error_dialog.setWindowTitle("Warning")
-    error_dialog.exec_()
-
-
-def show_warning_message(message):
-    warning_dialog = QMessageBox()
-    warning_dialog.setIcon(QMessageBox.Warning)
-    warning_dialog.setWindowTitle("Warning")
-    warning_dialog.setText(message)
-
-    # Add OK and Cancel buttons
-    warning_dialog.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-
-    # Set the default button to Cancel
-    warning_dialog.setDefaultButton(QMessageBox.Cancel)
-
-    # Execute the dialog and get the response
-    response = warning_dialog.exec_()
-
-    # Return True if OK is clicked, False if Cancel is clicked
-    if response == QMessageBox.Ok:
-        return True
-    else:
-        return False
 
 
 class SpringToolPresetAdmin(QWidget):
@@ -55,7 +25,7 @@ class SpringToolPresetAdmin(QWidget):
             ):
 
         if not authorized_access:
-            show_error_message('Access Denied')
+            presets.show_error_message('Access Denied')
             raise Exception('Access Denied')
 
         if not parent:
@@ -68,7 +38,8 @@ class SpringToolPresetAdmin(QWidget):
         self.presets_file_path = presets.get_presets_file_path(
             prod_root_env_name,
             presets_dir_path,
-            presets_filename
+            presets_filename,
+            is_admin=True
         )
 
         self.load_preset_admin_ui()
@@ -208,11 +179,12 @@ class SpringToolPresetAdmin(QWidget):
             mc.warning('No preset selected')
             return
         message = 'Are you sure you want to remove this preset?'
-        if show_warning_message(message):
+        if presets.show_warning_message(message):
             if parent_name:
                 self.remove_preset_clicked(parent_name, item_text)
                 return
             self.remove_name_preset_clicked(item_text)
+        self.refresh_qtree()
 
     def remove_preset_clicked(self, parent_name, preset_name):
         character_name = parent_name
@@ -222,7 +194,9 @@ class SpringToolPresetAdmin(QWidget):
             character_name,
             body_part_name
             )
+
         print('Removing Presets')
+        self.refresh_qtree()
 
     def remove_name_preset_clicked(self, item_text):
         character_name = item_text
@@ -268,6 +242,7 @@ class SpringToolPresetAdmin(QWidget):
             item_text
 
             )
+        self.rename_preset_window.refresh_signal.connect(self.refresh_qtree)
         self.rename_preset_window.show()
 
     def show_saved_preset_popup(self):
@@ -303,6 +278,8 @@ class SpringToolPresetAdmin(QWidget):
             body_part=body_part_name,
             edit_mode=True
             )
+        self.preset_window.refresh_signal.connect(
+            self.refresh_qtree)
         self.preset_window.show()
 
 

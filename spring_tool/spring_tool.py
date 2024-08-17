@@ -431,7 +431,8 @@ class SpringToolWindow(QMainWindow):
         self.character_combo.clear()
         saved_char_list = presets.get_available_characters(
             self.presets_file_path)
-        saved_char_list.sort()
+        if saved_char_list:
+            saved_char_list.sort()
         if not saved_char_list:
             return
         for char in saved_char_list:
@@ -499,6 +500,9 @@ class SpringToolWindow(QMainWindow):
             decay_value,
             position
             )
+
+        self.preset_window.refresh_signal.connect(
+                self.refresh_characters_combobox)
         self.preset_window.show()
 
     def set_values_from_preset(self):

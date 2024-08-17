@@ -6,9 +6,64 @@ import json
 import os
 from PySide2.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
-    QDoubleSpinBox, QLabel, QLineEdit)
+    QDoubleSpinBox, QLabel, QLineEdit, QMessageBox)
 from PySide2 import QtCore
-import maya.cmds as mc
+
+
+def show_error_message(message):
+    error_dialog = QMessageBox()
+    error_dialog.setText(message)
+    error_dialog.setIcon(QMessageBox.Critical)
+    error_dialog.setWindowTitle("Warning")
+    error_dialog.exec_()
+
+
+def show_warning_message(message):
+    warning_dialog = QMessageBox()
+    warning_dialog.setIcon(QMessageBox.Warning)
+    warning_dialog.setWindowTitle("Warning")
+    warning_dialog.setText(message)
+
+    # Add OK and Cancel buttons
+    warning_dialog.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+
+    # Set the default button to Cancel
+    warning_dialog.setDefaultButton(QMessageBox.Cancel)
+
+    # Execute the dialog and get the response
+    response = warning_dialog.exec_()
+
+    # Return True if OK is clicked, False if Cancel is clicked
+    if response == QMessageBox.Ok:
+        return True
+    else:
+        return False
+
+
+def create_preset_file(path, filename):
+    '''
+    If no preset file found but path is set, ask the user to create the file
+    automatically
+    '''
+    message = "'No preset file found. Would you like to create one?'"
+    if not show_warning_message(message):
+        return None
+
+    if not os.path.isdir(path):
+        raise FileNotFoundError(f"The directory '{path}' does not exist.")
+
+    # Ensure the filename ends with .json
+    if not filename.endswith('.json'):
+        filename += '.json'
+
+    # Create the full file path
+    file_path = os.path.join(path, filename)
+
+    # Create and write an empty dictionary to the JSON file
+    with open(file_path, 'w') as json_file:
+        json.dump({}, json_file, indent=4)
+
+    return file_path
 
 
 def load_presets(path):
@@ -29,27 +84,35 @@ def get_preset(path, character_name, body_part):
 
 
 def get_presets_file_path(
-        prod_root_env_name=None,
-        presets_dir_path=None,
-        presets_filename=None):
+        environment_variable_name=None,
+        presets_directory_path=None,
+        presets_filename=None,
+        is_admin=False):
 
-    if not presets_dir_path:
+    if not presets_directory_path:
         return False
 
-    presets_path = os.path.normpath(presets_dir_path)
-    if prod_root_env_name:
-        presets_path = os.path.normpath(
-            os.path.join(os.environ.get(prod_root_env_name), presets_path))
+    presets_path = os.path.normpath(presets_directory_path)
+    if environment_variable_name:
+        environment_variable_value = os.environ.get(environment_variable_name)
+        if environment_variable_value:
+            presets_path = os.path.normpath(
+                os.path.join(environment_variable_value, presets_path))
 
     if not os.path.isdir(presets_path):
-        mc.warning('Preference dir is not found!')
         return False
 
     if not presets_filename:
         presets_filename = 'spring_tool_presets.json'
 
-    presets_path = os.path.join(presets_path, presets_filename)
-    return presets_path
+    presets_file_path = os.path.join(presets_path, presets_filename)
+
+    if not os.path.isfile(presets_file_path):
+        if is_admin:
+            raise FileNotFoundError('No preset file found')
+        presets_file_path = create_preset_file(presets_path, presets_filename)
+
+    return presets_file_path
 
 
 def get_available_characters(path):
@@ -146,7 +209,8 @@ def remove_preset(path, character_name, body_part=None):
         else:
             return False  # Return False if the body part doesn't exist
 
-        # If there are no more presets for the character, remove the character entry
+        # If there are no more presets for the character,
+        # remove the character entry
         if not presets[character_name]:
             del presets[character_name]
 
@@ -166,7 +230,9 @@ def rename_key(json_data, old_key, new_key, parent_text=None):
         # Rename keys at a lower level based on parent_text
         if parent_text in json_data:
             if old_key in json_data[parent_text]:
-                json_data[parent_text][new_key] = json_data[parent_text].pop(old_key)
+                json_data[parent_text][new_key] = (
+                    json_data[parent_text].pop(old_key)
+                    )
     return json_data
 
 
@@ -196,6 +262,9 @@ def edit_preset(
 
 
 class EditPresetNamePopup(QWidget):
+
+    refresh_signal = QtCore.Signal()
+
     def __init__(
             self,
             main_window,
@@ -231,7 +300,7 @@ class EditPresetNamePopup(QWidget):
         # Buttons
         button_layout = QHBoxLayout()
         confirm_button = QPushButton("Confirm")
-        confirm_button.clicked.connect(self.save_preset_name_pressed)
+        confirm_button.clicked.connect(self.rename_preset_pressed)
         cancel_button = QPushButton("Cancel")
         cancel_button.clicked.connect(self.close)
         button_layout.addWidget(confirm_button)
@@ -239,7 +308,7 @@ class EditPresetNamePopup(QWidget):
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
-    def save_preset_name_pressed(self):
+    def rename_preset_pressed(self):
 
         item_text = self.item_text
         parent_text = self.parent_text
@@ -254,11 +323,14 @@ class EditPresetNamePopup(QWidget):
         # Save updated JSON data back to the file
         with open(self.presets_file_path, 'w') as file:
             json.dump(json_data, file, indent=4)
-
+        self.refresh_signal.emit()
         self.close()
 
 
 class SavePresetPopup(QWidget):
+
+    refresh_signal = QtCore.Signal()
+
     def __init__(
             self,
             main_window,
@@ -404,6 +476,7 @@ class SavePresetPopup(QWidget):
                 decay,
                 position)
             self.close()
+            self.refresh_signal.emit()
             return
 
         edit_preset(
@@ -415,3 +488,4 @@ class SavePresetPopup(QWidget):
             decay,
             position)
         self.close()
+        self.refresh_signal.emit()
