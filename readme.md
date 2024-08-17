@@ -27,7 +27,7 @@ That preset file can be shared accross team of artists.
 <p><b>Magic trick:</b>
 Using presets, you'll be able to launch the whole sim and bake process
 by right clicking any preset and 'Do Magic!' menu.</p>
-See the [Working with Presets](#working-with-presets) section for details.
+See the Working with Presets section for details.
 
 ## Launch on-the-go:
 You can quickly run the Spring Tool by copying the `spring_tool.py` code into Maya’s Python console and executing it.
