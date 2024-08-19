@@ -189,10 +189,6 @@ class SpringToolWindow(QMainWindow):
 
         self.layer_names_list = []
 
-
-
-        self.layer_names_list = []
-
     def ui_main(self):
         '''
         Main part of the tool, left UI panel
@@ -252,11 +248,13 @@ class SpringToolWindow(QMainWindow):
             self.slider_decay_value_changed)
 
         bake_on_layer_option_layout = QHBoxLayout()
-        bake_on_layer_qlabel = QLabel('Bake on layer:')
-        self.layers_on_qradbutton = QRadioButton('ON')
+        self.bake_on_layer_checkbox = QCheckBox('Bake on layers')
+        self.bake_on_layer_checkbox.stateChanged.connect(
+            self.save_checkboxes_states)
 
-        self.layers_off_qradbutton = QRadioButton('OFF')
-        self.layers_off_qradbutton.setChecked(True)
+        self.merge_animation_layer_checkbox = QCheckBox('Merge layers')
+        self.merge_animation_layer_checkbox.stateChanged.connect(
+            self.save_checkboxes_states)
 
         self.bake_button = QPushButton('3. Bake!')
         self.bake_button.clicked.connect(self.launch_bake)
@@ -290,7 +288,6 @@ class SpringToolWindow(QMainWindow):
         self.main_layout.addWidget(self.bake_button)
         self.main_layout.addWidget(self.remove_setup_button)
         self.main_split_layout.addLayout(self.main_layout, 2)
-        self.setCentralWidget(central_widget)
 
     def ui_presets(self):
         '''
@@ -338,6 +335,7 @@ class SpringToolWindow(QMainWindow):
         # Save the states as integers
         mc.optionVar(iv=('sptlBakeOnAnimLayers', int(bake_on_layer_state)))
         mc.optionVar(iv=('sptlMergeAnimLayers', int(merge_layers_state)))
+
     def load_checkboxes_states(self):
         '''
         Load and set the checkbox states from optionVars.
@@ -361,7 +359,6 @@ class SpringToolWindow(QMainWindow):
         # Unblock signals after setting the states
         self.bake_on_layer_checkbox.blockSignals(False)
         self.merge_animation_layer_checkbox.blockSignals(False)
-
 
     def showEvent(self, event):
         # Set window width and height to minimum and lock resizability
