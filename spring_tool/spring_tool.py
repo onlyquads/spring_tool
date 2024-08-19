@@ -191,6 +191,8 @@ class SpringToolWindow(QMainWindow):
 
 
 
+        self.layer_names_list = []
+
     def ui_main(self):
         '''
         Main part of the tool, left UI panel
@@ -250,13 +252,11 @@ class SpringToolWindow(QMainWindow):
             self.slider_decay_value_changed)
 
         bake_on_layer_option_layout = QHBoxLayout()
-        self.bake_on_layer_checkbox = QCheckBox('Bake on layers')
-        self.bake_on_layer_checkbox.stateChanged.connect(
-            self.save_checkboxes_states)
+        bake_on_layer_qlabel = QLabel('Bake on layer:')
+        self.layers_on_qradbutton = QRadioButton('ON')
 
-        self.merge_animation_layer_checkbox = QCheckBox('Merge layers')
-        self.merge_animation_layer_checkbox.stateChanged.connect(
-            self.save_checkboxes_states)
+        self.layers_off_qradbutton = QRadioButton('OFF')
+        self.layers_off_qradbutton.setChecked(True)
 
         self.bake_button = QPushButton('3. Bake!')
         self.bake_button.clicked.connect(self.launch_bake)
@@ -290,7 +290,7 @@ class SpringToolWindow(QMainWindow):
         self.main_layout.addWidget(self.bake_button)
         self.main_layout.addWidget(self.remove_setup_button)
         self.main_split_layout.addLayout(self.main_layout, 2)
-
+        self.setCentralWidget(central_widget)
 
     def ui_presets(self):
         '''
