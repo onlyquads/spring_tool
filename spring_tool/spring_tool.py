@@ -60,19 +60,34 @@ window.show()
 - Note: 'prod_root_env_name' will be sent as string in
 'os.environ.get(prod_root_env_name)' in 'get_presets_file_path' function.
 
+# Launch Administration instructions :
+There is an administration window that might be helpful to tweak, rename or
+delete any preset created.
+
+To launch it run this python command:
+
+```python
+from spring_tool import presets_admin
+window = presets_admin.SpringToolPresetAdmin(
+    prod_root_env_name=None, # can be usefull if you work with environments
+    presets_dir_path="/Users/Username/Desktop",
+    presets_filename="spring_tool_presets.json",
+    authorized_access=True,  # Set to False to restrict access to the window
+    )
+window.show()
+```
+
 '''
 
 
 import sys
-import os
-
 
 from functools import wraps
 from PySide2 import QtWidgets, QtCore
 from PySide2.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
-    QDoubleSpinBox, QSlider, QLabel, QRadioButton, QComboBox,
-    QLineEdit, QListWidget, QAction, QMenu)
+    QDoubleSpinBox, QSlider, QLabel, QComboBox, QListWidget, QAction, QMenu,
+    QCheckBox)
 import maya.cmds as mc
 import maya.mel as mm
 
@@ -135,174 +150,6 @@ def disable_viewport(func):
     return wrap
 
 
-def get_presets_file_path(
-        prod_root_env_name=None,
-        presets_dir_path=None,
-        presets_filename=None):
-
-    if not presets_dir_path:
-        return False
-
-    presets_path = os.path.normpath(presets_dir_path)
-    if prod_root_env_name:
-        presets_path = os.path.normpath(
-            os.path.join(os.environ.get(prod_root_env_name), presets_path))
-
-    if not os.path.isdir(presets_path):
-        mc.warning('Preference dir is not found!')
-        return False
-
-    if not presets_filename:
-        presets_filename = 'spring_tool_presets.json'
-
-    presets_path = os.path.join(presets_path, presets_filename)
-    return presets_path
-
-
-class SavePresetPopup(QWidget):
-    def __init__(
-            self,
-            main_window,
-            presets_path,
-            spring_value,
-            rigidity_value,
-            decay_value,
-            position,
-            parent=None,
-            char_name=None,
-            body_part=None,
-            edit_mode=False,
-            ):
-        super().__init__(parent=parent)
-        self.setWindowTitle("Save Preset")
-
-        self.main_window = main_window
-        self.presets_file_path = presets_path
-        self.presets = presets.load_presets(presets_path)
-        self.spring_value = spring_value
-        self.rigidity_value = rigidity_value
-        self.decay_value = decay_value
-        self.loc_position = position[0]
-        self.edit_mode = edit_mode
-        self.load_preset_popup_ui()
-        if char_name:
-            self.character_line_edit.setText(char_name)
-        if body_part:
-            self.body_part_line_edit.setText(body_part)
-
-    def load_preset_popup_ui(self):
-        layout = QVBoxLayout()
-
-        # Character Name
-        character_layout = QHBoxLayout()
-        character_label = QLabel("Character Name:")
-        self.character_line_edit = QLineEdit()
-        character_layout.addWidget(character_label)
-        character_layout.addWidget(self.character_line_edit)
-        layout.addLayout(character_layout)
-
-        # Body Part
-        body_part_layout = QHBoxLayout()
-        body_part_label = QLabel("Body part Name:")
-        self.body_part_line_edit = QLineEdit()
-        body_part_layout.addWidget(body_part_label)
-        body_part_layout.addWidget(self.body_part_line_edit)
-        layout.addLayout(body_part_layout)
-
-        # Spring
-        spring_layout = QHBoxLayout()
-        spring_label = QLabel("Spring:")
-        self.spring_spinbox = QDoubleSpinBox()
-        self.spring_spinbox.setRange(0.0, 1.0)
-        self.spring_spinbox.setSingleStep(0.01)
-        self.spring_spinbox.setValue(self.spring_value)
-        spring_layout.addWidget(spring_label)
-        spring_layout.addWidget(self.spring_spinbox)
-        layout.addLayout(spring_layout)
-
-        # Rigidity
-        rigidity_layout = QHBoxLayout()
-        rigidity_label = QLabel("Rigidity:")
-        self.rigidity_spinbox = QDoubleSpinBox()
-        self.rigidity_spinbox.setRange(0.0, 10.0)
-        self.rigidity_spinbox.setSingleStep(0.01)
-        self.rigidity_spinbox.setValue(self.rigidity_value)
-        rigidity_layout.addWidget(rigidity_label)
-        rigidity_layout.addWidget(self.rigidity_spinbox)
-        layout.addLayout(rigidity_layout)
-
-        # Decay
-        decay_layout = QHBoxLayout()
-        decay_label = QLabel("Decay:")
-        self.decay_spinbox = QDoubleSpinBox()
-        self.decay_spinbox.setSingleStep(0.01)
-        self.decay_spinbox.setRange(0.0, 10.0)
-        self.decay_spinbox.setValue(self.decay_value)
-        decay_layout.addWidget(decay_label)
-        decay_layout.addWidget(self.decay_spinbox)
-        layout.addLayout(decay_layout)
-
-        # Position
-        position_layout = QHBoxLayout()
-        position_label = QLabel('loc Pos (x,y,z):')
-        self.position_tx_spinbox = QDoubleSpinBox()
-        self.position_ty_spinbox = QDoubleSpinBox()
-        self.position_tz_spinbox = QDoubleSpinBox()
-        self.position_tx_spinbox.setMinimum(-999999)
-        self.position_ty_spinbox.setMinimum(-999999)
-        self.position_tz_spinbox.setMinimum(-999999)
-
-        self.position_tx_spinbox.setValue(self.loc_position[0])
-        self.position_ty_spinbox.setValue(self.loc_position[1])
-        self.position_tz_spinbox.setValue(self.loc_position[2])
-        position_layout.addWidget(position_label)
-        position_layout.addWidget(self.position_tx_spinbox)
-        position_layout.addWidget(self.position_ty_spinbox)
-        position_layout.addWidget(self.position_tz_spinbox)
-        layout.addLayout(position_layout)
-
-        # Buttons
-        button_layout = QHBoxLayout()
-        confirm_button = QPushButton("Confirm")
-        confirm_button.clicked.connect(self.save_preset_pressed)
-        cancel_button = QPushButton("Cancel")
-        cancel_button.clicked.connect(self.close)
-        button_layout.addWidget(confirm_button)
-        button_layout.addWidget(cancel_button)
-        layout.addLayout(button_layout)
-        self.setLayout(layout)
-
-    def save_preset_pressed(self):
-        character_name = self.character_line_edit.text()
-        body_part = self.body_part_line_edit.text()
-        spring = self.spring_spinbox.value()
-        rigidity = self.rigidity_spinbox.value()
-        decay = self.decay_spinbox.value()
-        position_x = self.position_tx_spinbox.value()
-        position_y = self.position_ty_spinbox.value()
-        position_z = self.position_tz_spinbox.value()
-        position = [position_x, position_y, position_z]
-
-        print("Character Name:", character_name)
-        print("Body Part Name:", body_part)
-        print("Spring:", spring)
-        print("Rigidity:", rigidity)
-        print("Decay:", decay)
-        print("position", position)
-
-        if not self.edit_mode:
-            presets.save_preset(
-                self.presets_file_path,
-                character_name,
-                body_part,
-                spring,
-                rigidity,
-                decay,
-                position)
-        self.main_window.refresh_characters_combobox()
-        self.close()
-
-
 class SpringToolWindow(QMainWindow):
 
     def __init__(
@@ -310,23 +157,28 @@ class SpringToolWindow(QMainWindow):
             parent=None,
             prod_root_env_name=None,
             presets_dir_path=None,
-            presets_filename=None
+            presets_filename=None,
+            lock_write_presets=False,
             ):
 
         if not parent:
             parent = maya_main_window()
         super(SpringToolWindow, self).__init__(parent=parent)
+
         self.setWindowTitle(TOOLNAME)
         self.setWindowFlags(QtCore.Qt.Tool)
         self.remove_setup_click_count = 0
+        self.lock_write_presets = lock_write_presets
 
-        self.presets_file_path = get_presets_file_path(
+        self.presets_file_path = presets.get_presets_file_path(
             prod_root_env_name,
             presets_dir_path,
             presets_filename
         )
-
         self.ui_main()
+
+        self.load_checkboxes_states()
+
         if presets and self.presets_file_path:
             self.ui_presets()
 
@@ -335,11 +187,17 @@ class SpringToolWindow(QMainWindow):
         self.locator_position = [0, 0, 0]
         self.aim_loc = None
 
+        self.layer_names_list = []
+
+
+
     def ui_main(self):
         '''
         Main part of the tool, left UI panel
         '''
         central_widget = QWidget(self)
+        self.setCentralWidget(central_widget)
+
         self.main_split_layout = QHBoxLayout(central_widget)
         self.main_layout = QVBoxLayout()
 
@@ -349,9 +207,9 @@ class SpringToolWindow(QMainWindow):
         self.previz_button = QPushButton('2. Live preview')
         self.previz_button.clicked.connect(self.handle_previz_btn_clicked)
 
-        weight_layout = QHBoxLayout(central_widget)
-        decay_layout = QHBoxLayout(central_widget)
-        rigidity_layout = QHBoxLayout(central_widget)
+        weight_layout = QHBoxLayout()
+        decay_layout = QHBoxLayout()
+        rigidity_layout = QHBoxLayout()
 
         spring_qlabel = QLabel('Spring')
         self.spring_value_spinbox = QDoubleSpinBox()
@@ -392,11 +250,13 @@ class SpringToolWindow(QMainWindow):
             self.slider_decay_value_changed)
 
         bake_on_layer_option_layout = QHBoxLayout()
-        bake_on_layer_qlabel = QLabel('Bake on layer:')
-        self.layers_on_qradbutton = QRadioButton('ON')
+        self.bake_on_layer_checkbox = QCheckBox('Bake on layers')
+        self.bake_on_layer_checkbox.stateChanged.connect(
+            self.save_checkboxes_states)
 
-        self.layers_off_qradbutton = QRadioButton('OFF')
-        self.layers_off_qradbutton.setChecked(True)
+        self.merge_animation_layer_checkbox = QCheckBox('Merge layers')
+        self.merge_animation_layer_checkbox.stateChanged.connect(
+            self.save_checkboxes_states)
 
         self.bake_button = QPushButton('3. Bake!')
         self.bake_button.clicked.connect(self.launch_bake)
@@ -416,9 +276,9 @@ class SpringToolWindow(QMainWindow):
         decay_layout.addWidget(self.decay_value_spinbox)
         decay_layout.addWidget(self.decay_value_slider)
 
-        bake_on_layer_option_layout.addWidget(bake_on_layer_qlabel)
-        bake_on_layer_option_layout.addWidget(self.layers_on_qradbutton)
-        bake_on_layer_option_layout.addWidget(self.layers_off_qradbutton)
+        bake_on_layer_option_layout.addWidget(self.bake_on_layer_checkbox)
+        bake_on_layer_option_layout.addWidget(
+            self.merge_animation_layer_checkbox)
 
         self.main_layout.addWidget(self.locators_button)
         self.main_layout.addWidget(self.previz_button)
@@ -426,11 +286,11 @@ class SpringToolWindow(QMainWindow):
         self.main_layout.addLayout(rigidity_layout)
         self.main_layout.addLayout(decay_layout)
         self.main_layout.addLayout(bake_on_layer_option_layout)
+        self.main_layout.addStretch()
         self.main_layout.addWidget(self.bake_button)
         self.main_layout.addWidget(self.remove_setup_button)
-        self.main_layout.addStretch()
         self.main_split_layout.addLayout(self.main_layout, 2)
-        self.setCentralWidget(central_widget)
+
 
     def ui_presets(self):
         '''
@@ -446,6 +306,8 @@ class SpringToolWindow(QMainWindow):
             self.refresh_characters_combobox)
         save_preset_button = QPushButton('Save Preset')
         save_preset_button.clicked.connect(self.show_save_preset_popup)
+        if self.lock_write_presets:
+            save_preset_button.setDisabled(True)
 
         self.body_parts_list_menu = QMenu()
         do_magic_action = QAction("Do Magic!", self)
@@ -455,7 +317,7 @@ class SpringToolWindow(QMainWindow):
         self.body_parts_list.customContextMenuRequested.connect(self.show_menu)
         self.body_parts_list_menu.addAction(do_magic_action)
         do_magic_action.triggered.connect(self.launch_all)
-        self.body_parts_list.setFixedHeight(133)
+        self.body_parts_list.setFixedHeight(154)
 
         # Populate the combo-box and list
         self.refresh_characters_combobox()
@@ -467,6 +329,39 @@ class SpringToolWindow(QMainWindow):
 
         self.main_split_layout.addLayout(self.presets_main_layout, 1)
         self.presets_main_layout.addStretch()
+
+    def save_checkboxes_states(self):
+        # Get the current state of each checkbox
+        bake_on_layer_state = self.bake_on_layer_checkbox.isChecked()
+        merge_layers_state = self.merge_animation_layer_checkbox.isChecked()
+
+        # Save the states as integers
+        mc.optionVar(iv=('sptlBakeOnAnimLayers', int(bake_on_layer_state)))
+        mc.optionVar(iv=('sptlMergeAnimLayers', int(merge_layers_state)))
+    def load_checkboxes_states(self):
+        '''
+        Load and set the checkbox states from optionVars.
+        '''
+        self.bake_on_layer_checkbox.blockSignals(True)
+        self.merge_animation_layer_checkbox.blockSignals(True)
+
+        if mc.optionVar(exists='sptlBakeOnAnimLayers'):
+            bake_on_layer_state = mc.optionVar(q='sptlBakeOnAnimLayers')
+            self.bake_on_layer_checkbox.setChecked(bool(bake_on_layer_state))
+        else:
+            self.bake_on_layer_checkbox.setChecked(False)
+
+        if mc.optionVar(exists='sptlMergeAnimLayers'):
+            merge_layers_state = mc.optionVar(q='sptlMergeAnimLayers')
+            self.merge_animation_layer_checkbox.setChecked(
+                bool(merge_layers_state))
+        else:
+            self.merge_animation_layer_checkbox.setChecked(False)
+
+        # Unblock signals after setting the states
+        self.bake_on_layer_checkbox.blockSignals(False)
+        self.merge_animation_layer_checkbox.blockSignals(False)
+
 
     def showEvent(self, event):
         # Set window width and height to minimum and lock resizability
@@ -544,7 +439,15 @@ class SpringToolWindow(QMainWindow):
 
     def remove_setup(self):
         mc.undoInfo(ock=True)
-        obj_name_list = [TOOLNAME, AIM_GRP_NAME]
+        obj_name_list = (
+            [
+                TOOLNAME,
+                AIM_GRP_NAME,
+                PARTICLE_NAME,
+                LOCATOR_NAME,
+                CTL_LOCATOR
+            ]
+            )
         [mc.delete(obj) for obj in obj_name_list if mc.objExists(f'{obj}*')]
         mc.undoInfo(cck=True)
 
@@ -552,6 +455,7 @@ class SpringToolWindow(QMainWindow):
         self.remove_setup_click_count += 1
         if self.remove_setup_click_count == 2:
             self.rig_ctl_list = []
+            self.layer_names_list = []
             self.aim_loc = None
             self.axes = None
             self.spring_value_spinbox.setValue(DEFAULT_SPRING_VALUE)
@@ -568,6 +472,8 @@ class SpringToolWindow(QMainWindow):
         self.character_combo.clear()
         saved_char_list = presets.get_available_characters(
             self.presets_file_path)
+        if saved_char_list:
+            saved_char_list.sort()
         if not saved_char_list:
             return
         for char in saved_char_list:
@@ -627,14 +533,17 @@ class SpringToolWindow(QMainWindow):
         decay_value = self.decay_value_spinbox.value()
         position = self.get_aim_loc_position()
 
-        self.preset_window = SavePresetPopup(
+        self.preset_window = presets.SavePresetPopup(
             self,
             self.presets_file_path,
             spring_value,
             rigidity_value,
             decay_value,
-            position,
+            position
             )
+
+        self.preset_window.refresh_signal.connect(
+                self.refresh_characters_combobox)
         self.preset_window.show()
 
     def set_values_from_preset(self):
@@ -748,7 +657,7 @@ class SpringToolWindow(QMainWindow):
         # Align locator to first selected controller, bake, delete constraint
         orig_sel_constraint = mc.parentConstraint(
             self.aim_loc, ctl_locator, mo=False)
-        self.bake_rot_tans_with_mel(ctl_locator)
+        self.bake_rot_trans_with_mel(ctl_locator)
         mc.delete(orig_sel_constraint)
 
         parent_constraint = mc.parentConstraint(
@@ -804,7 +713,7 @@ class SpringToolWindow(QMainWindow):
         mc.setAttr(f'{loc[0]}.t', *saved_position)
 
     @disable_viewport
-    def bake_rot_tans_with_mel(self, current_ctl):
+    def bake_rot_trans_with_mel(self, current_ctl):
         frame_in, frame_out = self.get_framerange()
         mel_command = f'bakeResults -simulation true ' \
             f'-t "{frame_in}:{frame_out}" -sampleBy 1 ' \
@@ -827,20 +736,44 @@ class SpringToolWindow(QMainWindow):
 
     def create_anim_layer(self, current_ctl):
         mc.select(current_ctl)
+        layer_name = f'{LAYER_PREFIX}_{self.get_node_shortname(current_ctl)}'
         mc.animLayer(
-            f'{LAYER_PREFIX}_{self.get_node_shortname(current_ctl)}',
+            layer_name,
             aso=True,
             etr=True)
+        self.layer_names_list.append(layer_name)
         mc.select(clear=True)
 
     def bake_ctl(self, current_ctl):
         layers = False
-        if self.layers_on_qradbutton.isChecked():
+        if self.bake_on_layer_checkbox.isChecked():
             self.create_anim_layer(current_ctl)
             layers = True
         self.bake_rotation_with_mel(current_ctl, layers=layers)
         self.remove_setup()
         return
+
+    def merge_animation_layer(
+            self, layer_name_list, merged_layer_name, delete_baked=True):
+        if not layer_name_list:
+            return
+        try:
+            mc.optionVar(intValue=('animLayerMergeDeleteLayers', delete_baked))
+            if not mc.optionVar(exists='animLayerMergeByTime'):
+                mc.optionVar(floatValue=('animLayerMergeByTime', 1.0))
+
+            # Add the target layer at the start of the list
+            layer_name_list.insert(0, merged_layer_name)
+
+            # Merge the layers
+            mm.eval('animLayerMerge {"%s"}' % '","'.join(layer_name_list))
+
+            # Rename the merged layer
+            mc.rename('Merged_Layer', merged_layer_name)
+
+        except Exception:
+            mc.warning('Failed to merge animation layers')
+            return
 
     @disable_viewport
     def launch_bake(self):
@@ -849,7 +782,7 @@ class SpringToolWindow(QMainWindow):
         if not mc.objExists(TOOLNAME):
             mc.warning('No Live Preview setup found, use Live Preview first')
             return
-        print('--- BAKING Please WAIT ---')
+        print('--- BAKING PLEASE WAIT ---')
         spring_weight = self.spring_value_spinbox.value()
         decay = self.get_user_decay()
 
@@ -869,6 +802,15 @@ class SpringToolWindow(QMainWindow):
             spring_weight = self.get_overlap_weight_math(spring_weight, decay)
             self.setup_live_preview([selected_rig_ctl[i]], (1-spring_weight))
             self.bake_ctl(current_ctl=selected_rig_ctl[i])
+
+        if self.merge_animation_layer_checkbox.isChecked():
+            controller_name = self.get_node_shortname(selected_rig_ctl[0])
+            merged_layer_name = (f'{LAYER_PREFIX}_{controller_name}_merged')
+            self.merge_animation_layer(
+                self.layer_names_list, merged_layer_name)
+
+        # Clear the anim layer list
+        self.layer_names_list = []
         mc.warning('Spring COMPLETED !')
         self.switch_back_vp_eval(vp_eval)
         mc.undoInfo(cck=True)
