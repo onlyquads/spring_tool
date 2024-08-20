@@ -117,6 +117,8 @@ AIM_VECTORS = {
             -2: ((0, -1, 0), (0, 0, 1)),
             -3: ((0, 0, -1), (1, 0, 0)),
         }
+BAKE_ON_LAYERS_OPTVAR = 'sptlBakeOnAnimLayers'
+MERGE_LAYERS_OPTVAR = 'sptlMergeAnimLayers'
 
 window = None
 
@@ -333,8 +335,8 @@ class SpringToolWindow(QMainWindow):
         merge_layers_state = self.merge_animation_layer_checkbox.isChecked()
 
         # Save the states as integers
-        mc.optionVar(iv=('sptlBakeOnAnimLayers', int(bake_on_layer_state)))
-        mc.optionVar(iv=('sptlMergeAnimLayers', int(merge_layers_state)))
+        mc.optionVar(iv=(BAKE_ON_LAYERS_OPTVAR, int(bake_on_layer_state)))
+        mc.optionVar(iv=(MERGE_LAYERS_OPTVAR, int(merge_layers_state)))
 
     def load_checkboxes_states(self):
         '''
@@ -343,14 +345,14 @@ class SpringToolWindow(QMainWindow):
         self.bake_on_layer_checkbox.blockSignals(True)
         self.merge_animation_layer_checkbox.blockSignals(True)
 
-        if mc.optionVar(exists='sptlBakeOnAnimLayers'):
-            bake_on_layer_state = mc.optionVar(q='sptlBakeOnAnimLayers')
+        if mc.optionVar(exists=BAKE_ON_LAYERS_OPTVAR):
+            bake_on_layer_state = mc.optionVar(q=BAKE_ON_LAYERS_OPTVAR)
             self.bake_on_layer_checkbox.setChecked(bool(bake_on_layer_state))
         else:
             self.bake_on_layer_checkbox.setChecked(False)
 
-        if mc.optionVar(exists='sptlMergeAnimLayers'):
-            merge_layers_state = mc.optionVar(q='sptlMergeAnimLayers')
+        if mc.optionVar(exists=MERGE_LAYERS_OPTVAR):
+            merge_layers_state = mc.optionVar(q=MERGE_LAYERS_OPTVAR)
             self.merge_animation_layer_checkbox.setChecked(
                 bool(merge_layers_state))
         else:
