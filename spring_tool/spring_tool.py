@@ -90,6 +90,7 @@ from PySide2.QtWidgets import (
     QCheckBox)
 import maya.cmds as mc
 import maya.mel as mm
+import maya.OpenMaya as om
 
 try:
     from spring_tool import presets
@@ -105,7 +106,8 @@ AIM_GRP_NAME = 'SPTL_aim_loc_GRP'
 PARTICLE_NAME = 'SPTL_particle'
 LOCATOR_NAME = 'SPTL_spring_locator'
 LAYER_PREFIX = 'SPTL_layer'
-CTL_LOCATOR = "SPTL_orig_pos_loc"
+CTL_LOCATOR = 'SPTL_orig_pos_loc'
+SPTL_NODE_TYPE = 'Spring_tool_node'
 DEFAULT_SPRING_VALUE = 0.45
 DEFAULT_DECAY_VALUE = 1.2
 DEFAULT_RIGIDITY_VALUE = 7.0
@@ -152,6 +154,73 @@ def disable_viewport(func):
     return wrap
 
 
+def add_bool_attr(node, lock=True):
+
+    '''
+    Description: Creates custom string attributes and sets the value with
+    given name, value.
+    - Optional short name and lock attributes.
+    - Lock default is True
+    '''
+    attribute_type = 'bool'
+
+    # check if attribute already exists, if not create it.
+    if mc.attributeQuery(SPTL_NODE_TYPE, node=node, exists=True):
+        return
+    mc.addAttr(
+        node,
+        longName=SPTL_NODE_TYPE,
+        attributeType=attribute_type,
+        )
+
+    mc.setAttr(
+        f'{node}.{SPTL_NODE_TYPE}',
+        True,
+        lock=lock
+    )
+
+
+def list_nodes_with_sptl_attr():
+    """
+    Returns a list of all nodes in the scene that have
+    the sptl custom attribute and where the attribute is set to True.
+    """
+    nodes_with_attr = []
+    attribute_name = SPTL_NODE_TYPE
+
+    # Create an iterator to traverse all DAG nodes
+    iter_dag = om.MItDag(om.MItDag.kDepthFirst, om.MFn.kInvalid)
+
+    while not iter_dag.isDone():
+        obj = iter_dag.currentItem()
+        fn_dag_node = om.MFnDagNode(obj)
+        node_name = fn_dag_node.name()
+
+        try:
+            # Check if the attribute exists
+            if not fn_dag_node.hasAttribute(attribute_name):
+                iter_dag.next()
+                continue
+
+            # Get the attribute plug
+            plug = fn_dag_node.findPlug(attribute_name, False)
+
+            # Assuming the attribute is a boolean:
+            attr_value = plug.asBool()
+
+            # Check if the attribute is True
+            if attr_value:
+                nodes_with_attr.append(node_name)
+
+        except RuntimeError:
+            # Handle cases where the attribute does not exist or other issues
+            pass
+
+        iter_dag.next()
+
+    return nodes_with_attr
+
+
 class SpringToolWindow(QMainWindow):
 
     def __init__(
@@ -169,16 +238,13 @@ class SpringToolWindow(QMainWindow):
 
         self.setWindowTitle(TOOLNAME)
         self.setWindowFlags(QtCore.Qt.Tool)
-        self.remove_setup_click_count = 0
         self.lock_write_presets = lock_write_presets
-
         self.presets_file_path = presets.get_presets_file_path(
             prod_root_env_name,
             presets_dir_path,
             presets_filename
         )
         self.ui_main()
-
         self.load_checkboxes_states()
 
         if presets and self.presets_file_path:
@@ -188,8 +254,11 @@ class SpringToolWindow(QMainWindow):
         self.axes = [0, 0, 0]
         self.locator_position = [0, 0, 0]
         self.aim_loc = None
-
         self.layer_names_list = []
+
+        # Clear any existing nodes with sptl attribute from previous session
+        if list_nodes_with_sptl_attr():
+            self.clean_scene()
 
     def ui_main(self):
         '''
@@ -436,7 +505,10 @@ class SpringToolWindow(QMainWindow):
                 f'{object}.{transform}{axis}', l=True)]
         return locked_attr_list
 
-    def remove_setup(self):
+    def remove_setup_nodes(self):
+        '''
+        Removes all the setup nodes from the scene
+        '''
         mc.undoInfo(ock=True)
         obj_name_list = (
             [
@@ -447,21 +519,37 @@ class SpringToolWindow(QMainWindow):
                 CTL_LOCATOR
             ]
             )
-        [mc.delete(obj) for obj in obj_name_list if mc.objExists(f'{obj}*')]
+        for obj in obj_name_list:
+            if mc.objExists(f'{obj}*'):
+                mc.delete(obj)
+        mc.undoInfo(cck=True)
+
+    def clean_scene(self):
+        '''
+        Remove all the spring tool nodes from the scene
+        '''
+        mc.undoInfo(ock=True)
+        sptl_nodes = list_nodes_with_sptl_attr()
+        if not sptl_nodes:
+            return
+        for node in sptl_nodes:
+            if not mc.objExists(node):
+                continue
+            mc.delete(node)
+        print('Spring Tool Nodes correctly removed')
         mc.undoInfo(cck=True)
 
     def clear_all(self):
-        self.remove_setup_click_count += 1
-        if self.remove_setup_click_count == 2:
-            self.rig_ctl_list = []
-            self.layer_names_list = []
-            self.aim_loc = None
-            self.axes = None
-            self.spring_value_spinbox.setValue(DEFAULT_SPRING_VALUE)
-            self.decay_value_spinbox.setValue(DEFAULT_DECAY_VALUE)
-            self.remove_setup_click_count = 0
-            return
-        self.remove_setup()
+        '''
+        Resets all the variables to default
+        '''
+        self.rig_ctl_list = []
+        self.layer_names_list = []
+        self.aim_loc = None
+        self.axes = None
+        self.spring_value_spinbox.setValue(DEFAULT_SPRING_VALUE)
+        self.decay_value_spinbox.setValue(DEFAULT_DECAY_VALUE)
+        self.clean_scene()
 
     def refresh_characters_combobox(self):
         '''
@@ -572,11 +660,18 @@ class SpringToolWindow(QMainWindow):
         self.rig_ctl_list = []
         self.rig_ctl_list = sorted(selected_rig_ctl_list)
         aim_loc_grp = mc.group(name=AIM_GRP_NAME, empty=True)
+        # Add custom string attribute
+        add_bool_attr(aim_loc_grp)
+        mc.parent(aim_loc_grp, self.rig_ctl_list[0], relative=True)
         sel_matrix = mc.xform(
             self.rig_ctl_list[0], q=True, ws=True, matrix=True)
         mc.xform(aim_loc_grp, ws=True, matrix=sel_matrix)
-        mc.parentConstraint(self.rig_ctl_list[0], aim_loc_grp, mo=True)
+        parent_constraint = mc.parentConstraint(
+            self.rig_ctl_list[0], aim_loc_grp, mo=True)
+        add_bool_attr(parent_constraint[0])
+
         self.aim_loc = mc.spaceLocator(name='SPTL_Aim_loc')
+        add_bool_attr(self.aim_loc[0])
         mc.parent(self.aim_loc, aim_loc_grp, relative=True)
         mc.undoInfo(cck=True)
 
@@ -645,33 +740,40 @@ class SpringToolWindow(QMainWindow):
             return mc.warning('Live preview already set')
         # ROTATION MODE - AFFECT ONLY ROTATION ATTRIBUTES
         tool_grp = mc.group(n=TOOLNAME, em=True)
+        add_bool_attr(tool_grp)
         frame_in, frame_out = self.get_framerange()
         mc.currentTime(frame_in, edit=True)
         ctl_locator = mc.spaceLocator(n=CTL_LOCATOR)
+        add_bool_attr(ctl_locator[0])
         sel_matrix = mc.xform(rig_ctl_list[0], q=True, ws=True, matrix=True)
         mc.xform(ctl_locator, ws=True, matrix=sel_matrix)
 
-        mc.particle(p=[(0, 0, 0)], n=PARTICLE_NAME)
+        particle_system = mc.particle(p=[(0, 0, 0)], n=PARTICLE_NAME)
+        add_bool_attr(particle_system[0])
 
         # Align locator to first selected controller, bake, delete constraint
         orig_sel_constraint = mc.parentConstraint(
             self.aim_loc, ctl_locator, mo=False)
+        add_bool_attr(orig_sel_constraint[0])
         self.bake_rot_trans_with_mel(ctl_locator)
         mc.delete(orig_sel_constraint)
 
         parent_constraint = mc.parentConstraint(
             ctl_locator, PARTICLE_NAME, mo=False)
+        add_bool_attr(parent_constraint[0])
         mc.delete(parent_constraint)
 
         # Setup Spring weight
         if not spring_weight:
             spring_weight = self.get_user_spring_weight()
-        mc.goal(PARTICLE_NAME, g=ctl_locator, w=spring_weight)
+        goal = mc.goal(PARTICLE_NAME, g=ctl_locator, w=spring_weight)
+        add_bool_attr(goal[0])
         spring_loc_name = LOCATOR_NAME
         self.update_rigidity_value()
 
         # Create Spring locator and link it to the particle node
         spring_loc = mc.spaceLocator(n=spring_loc_name)
+        add_bool_attr(spring_loc[0])
         scale = self.master_scale
         expression = (
             f'{spring_loc_name}.tx = {PARTICLE_NAME}.wctx / {scale};'
@@ -680,14 +782,16 @@ class SpringToolWindow(QMainWindow):
             )
         mc.expression(object=spring_loc_name, string=expression)
 
-        mc.pointConstraint(spring_loc, self.aim_loc[0], mo=True)
+        point_constraint = mc.pointConstraint(
+            spring_loc, self.aim_loc[0], mo=True)
+        add_bool_attr(point_constraint[0])
         mc.parent(ctl_locator, PARTICLE_NAME, spring_loc, tool_grp)
 
         # BUILD AIM CONSTRAINT
         direction = self.get_direction()
         locked_rot_attr_list = self.get_locked_attr(rig_ctl_list[0], 'r')
         aim_vector, up_vector = AIM_VECTORS[direction]
-        mc.aimConstraint(
+        aim_constraint = mc.aimConstraint(
             spring_loc[0],
             rig_ctl_list[0],
             aimVector=aim_vector,
@@ -698,6 +802,7 @@ class SpringToolWindow(QMainWindow):
             mo=True,
             skip=locked_rot_attr_list,
             )
+        add_bool_attr(aim_constraint[0])
         mc.setAttr(f'{PARTICLE_NAME}.startFrame', frame_in)
         mc.undoInfo(cck=True)
 
@@ -749,7 +854,7 @@ class SpringToolWindow(QMainWindow):
             self.create_anim_layer(current_ctl)
             layers = True
         self.bake_rotation_with_mel(current_ctl, layers=layers)
-        self.remove_setup()
+        self.clean_scene()
         return
 
     def merge_animation_layer(
