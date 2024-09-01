@@ -90,7 +90,6 @@ from PySide2.QtWidgets import (
     QCheckBox)
 import maya.cmds as mc
 import maya.mel as mm
-import maya.OpenMaya as om
 
 try:
     from spring_tool import presets
@@ -107,7 +106,7 @@ PARTICLE_NAME = 'SPTL_particle'
 LOCATOR_NAME = 'SPTL_spring_locator'
 LAYER_PREFIX = 'SPTL_layer'
 CTL_LOCATOR = 'SPTL_orig_pos_loc'
-SPTL_NODE_TYPE = 'Spring_tool_node'
+SPTL_NODE_ATTR = 'Spring_tool_node'
 DEFAULT_SPRING_VALUE = 0.45
 DEFAULT_DECAY_VALUE = 1.2
 DEFAULT_RIGIDITY_VALUE = 7.0
@@ -159,22 +158,18 @@ def add_bool_attr(node, lock=True):
     '''
     Description: Creates custom string attributes and sets the value with
     given name, value.
-    - Optional short name and lock attributes.
-    - Lock default is True
     '''
     attribute_type = 'bool'
-
     # check if attribute already exists, if not create it.
-    if mc.attributeQuery(SPTL_NODE_TYPE, node=node, exists=True):
+    if mc.attributeQuery(SPTL_NODE_ATTR, node=node, exists=True):
         return
     mc.addAttr(
         node,
-        longName=SPTL_NODE_TYPE,
+        longName=SPTL_NODE_ATTR,
         attributeType=attribute_type,
         )
-
     mc.setAttr(
-        f'{node}.{SPTL_NODE_TYPE}',
+        f'{node}.{SPTL_NODE_ATTR}',
         True,
         lock=lock
     )
@@ -185,40 +180,9 @@ def list_nodes_with_sptl_attr():
     Returns a list of all nodes in the scene that have
     the sptl custom attribute and where the attribute is set to True.
     """
-    nodes_with_attr = []
-    attribute_name = SPTL_NODE_TYPE
-
-    # Create an iterator to traverse all DAG nodes
-    iter_dag = om.MItDag(om.MItDag.kDepthFirst, om.MFn.kInvalid)
-
-    while not iter_dag.isDone():
-        obj = iter_dag.currentItem()
-        fn_dag_node = om.MFnDagNode(obj)
-        node_name = fn_dag_node.name()
-
-        try:
-            # Check if the attribute exists
-            if not fn_dag_node.hasAttribute(attribute_name):
-                iter_dag.next()
-                continue
-
-            # Get the attribute plug
-            plug = fn_dag_node.findPlug(attribute_name, False)
-
-            # Assuming the attribute is a boolean:
-            attr_value = plug.asBool()
-
-            # Check if the attribute is True
-            if attr_value:
-                nodes_with_attr.append(node_name)
-
-        except RuntimeError:
-            # Handle cases where the attribute does not exist or other issues
-            pass
-
-        iter_dag.next()
-
-    return nodes_with_attr
+    objects_with_attr = mc.ls(f'*.{SPTL_NODE_ATTR}', sn=True)
+    base_objects = [obj.split('.')[0] for obj in objects_with_attr]
+    return base_objects
 
 
 class SpringToolWindow(QMainWindow):
