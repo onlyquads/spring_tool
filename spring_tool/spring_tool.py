@@ -224,6 +224,9 @@ class SpringToolWindow(QMainWindow):
         if list_nodes_with_sptl_attr():
             self.clean_scene()
 
+        if not self.bake_on_layer_checkbox.isChecked():
+            self.merge_animation_layer_checkbox.setEnabled(False)
+
     def ui_main(self):
         '''
         Main part of the tool, left UI panel
@@ -370,6 +373,9 @@ class SpringToolWindow(QMainWindow):
         # Save the states as integers
         mc.optionVar(iv=(BAKE_ON_LAYERS_OPTVAR, int(bake_on_layer_state)))
         mc.optionVar(iv=(MERGE_LAYERS_OPTVAR, int(merge_layers_state)))
+
+        self.merge_animation_layer_checkbox.setEnabled(bake_on_layer_state)
+
 
     def load_checkboxes_states(self):
         '''
