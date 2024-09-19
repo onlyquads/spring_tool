@@ -203,16 +203,18 @@ class SpringToolWindow(QMainWindow):
         self.setWindowTitle(TOOLNAME)
         self.setWindowFlags(QtCore.Qt.Tool)
         self.lock_write_presets = lock_write_presets
-        self.presets_file_path = presets.get_presets_file_path(
-            prod_root_env_name,
-            presets_dir_path,
-            presets_filename
-        )
+
         self.ui_main()
         self.load_checkboxes_states()
 
-        if presets and self.presets_file_path:
-            self.ui_presets()
+        if presets:
+            self.presets_file_path = presets.get_presets_file_path(
+                prod_root_env_name,
+                presets_dir_path,
+                presets_filename
+            )
+            if self.presets_file_path:
+                self.ui_presets()
 
         self.master_scale = 1.0
         self.axes = [0, 0, 0]
