@@ -6,7 +6,7 @@ import json
 import os
 from PySide2.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
-    QDoubleSpinBox, QLabel, QLineEdit, QMessageBox)
+    QDoubleSpinBox, QLabel, QLineEdit, QMessageBox, QRadioButton)
 from PySide2 import QtCore
 
 
@@ -133,6 +133,7 @@ def save_preset(
         path,
         character_name,
         body_part,
+        spring_mode,
         spring,
         spring_rigidity,
         decay,
@@ -145,6 +146,7 @@ def save_preset(
         raise ValueError(
             f"Body part '{body_part}' already exists for '{character_name}'")
     presets[character_name][body_part] = {
+        'spring_mode': spring_mode,
         'spring_value': spring,
         'spring_rigidity': spring_rigidity,
         'decay': decay,
@@ -170,6 +172,7 @@ def get_all_data(path, character_name, body_part):
         return None, None, None, None
 
     # Extract relevant data
+    spring_mode = body_part_data.get('spring_mode')
     spring_value = body_part_data.get('spring_value')
     spring_rigidity = body_part_data.get('spring_rigidity')
     decay = body_part_data.get('decay')
@@ -177,7 +180,7 @@ def get_all_data(path, character_name, body_part):
     pos_data = body_part_data.get('position')
     position = [(pos_data[0], pos_data[1], pos_data[2])] if pos_data else None
 
-    return spring_value, spring_rigidity, decay, position
+    return spring_mode, spring_value, spring_rigidity, decay, position
 
 
 def remove_preset(path, character_name, body_part=None):
@@ -240,6 +243,7 @@ def edit_preset(
         path,
         character_name,
         body_part,
+        spring_mode=None,
         spring=None,
         spring_rigidity=None,
         decay=None,
@@ -248,6 +252,8 @@ def edit_preset(
     presets = load_presets(path)
 
     preset = presets[character_name][body_part]
+    if spring_mode is not None:
+        preset['spring_mode'] = spring_mode
     if spring is not None:
         preset['spring_value'] = spring
     if spring_rigidity is not None:
@@ -335,6 +341,7 @@ class SavePresetPopup(QWidget):
             self,
             main_window,
             presets_path,
+            spring_mode,
             spring_value,
             rigidity_value,
             decay_value,
@@ -352,12 +359,17 @@ class SavePresetPopup(QWidget):
         self.main_window = main_window
         self.presets_file_path = presets_path
         self.presets = load_presets(presets_path)
+        self.spring_mode = spring_mode
         self.spring_value = spring_value
         self.rigidity_value = rigidity_value
         self.decay_value = decay_value
         self.loc_position = position[0]
         self.edit_mode = edit_mode
         self.load_preset_popup_ui()
+        if spring_mode == 'rotation' or spring_mode is None:
+            self.rotation_mode_radio.setChecked(True)
+        else:
+            self.translation_mode_radio.setChecked(True)
         if char_name:
             self.character_line_edit.setText(char_name)
         if body_part:
@@ -368,6 +380,16 @@ class SavePresetPopup(QWidget):
 
     def load_preset_popup_ui(self):
         layout = QVBoxLayout()
+
+        # Spring mode
+        spring_mode_layout = QHBoxLayout()
+        spring_mode_label = QLabel("Spring Mode")
+        self.rotation_mode_radio = QRadioButton('Rotation')
+        self.translation_mode_radio = QRadioButton('Translation')
+        spring_mode_layout.addWidget(spring_mode_label)
+        spring_mode_layout.addWidget(self.rotation_mode_radio)
+        spring_mode_layout.addWidget(self.translation_mode_radio)
+        layout.addLayout(spring_mode_layout)
 
         # Character Name
         text_to_rename_layout = QHBoxLayout()
@@ -449,8 +471,15 @@ class SavePresetPopup(QWidget):
         self.setLayout(layout)
 
     def save_preset_pressed(self):
+
         character_name = self.character_line_edit.text()
         body_part = self.body_part_line_edit.text()
+
+        if self.rotation_mode_radio.isChecked():
+            spring_mode = 'rotation'
+        else:
+            spring_mode = 'translation'
+
         spring = self.spring_spinbox.value()
         rigidity = self.rigidity_spinbox.value()
         decay = self.decay_spinbox.value()
@@ -461,6 +490,7 @@ class SavePresetPopup(QWidget):
 
         print("Character Name:", character_name)
         print("Body Part Name:", body_part)
+        print("Spring Mode", spring_mode)
         print("Spring:", spring)
         print("Rigidity:", rigidity)
         print("Decay:", decay)
@@ -471,6 +501,7 @@ class SavePresetPopup(QWidget):
                 self.presets_file_path,
                 character_name,
                 body_part,
+                spring_mode,
                 spring,
                 rigidity,
                 decay,
@@ -483,6 +514,7 @@ class SavePresetPopup(QWidget):
             self.presets_file_path,
             character_name,
             body_part,
+            spring_mode,
             spring,
             rigidity,
             decay,

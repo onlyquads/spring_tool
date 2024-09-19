@@ -130,14 +130,10 @@ class SpringToolPresetAdmin(QWidget):
             parent_item = selected_item.parent()
             if parent_item.isValid():
                 parent_text = parent_item.data()
-                print(f"Selected Item: {parent_text} -> {item_text}")
-
             else:
-                print(f"Selected Item: {item_text}")
                 parent_text = None
-
         else:
-            print("Selected Item: None")
+            # Selecte item is None
             parent_text = None
             item_text = None
 
@@ -260,16 +256,16 @@ class SpringToolPresetAdmin(QWidget):
 
         char_name = parent_item
         body_part_name = item_text
-        spring_value, spring_rigidity, decay, pos = presets.get_all_data(
+        spring_mode, spring_value, spring_rigidity, decay, pos = presets.get_all_data(
             path=self.presets_file_path,
             character_name=char_name,
             body_part=body_part_name
         )
 
-        print(f'This is the saved position : {pos[0]}')
         self.preset_window = presets.SavePresetPopup(
             self,
             self.presets_file_path,
+            spring_mode,
             spring_value,
             spring_rigidity,
             decay,

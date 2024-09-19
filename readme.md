@@ -11,7 +11,6 @@ A preset system has been added, see the presets section
 [Watch a Quick Tutorial](https://garcia-nicolas.com/download/3147/?tmstv=1713513016&v=3148)
 
 ## How to use:
-This tool works only for rotations.
 
 1. **Select Controllers:** Choose all the controllers in the chain (or just one).
 2. **Create Locator:** Click "Create Locator" and align it to the end of the chain to set its scale.

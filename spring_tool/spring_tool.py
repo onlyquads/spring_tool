@@ -6,7 +6,6 @@ Fully rewritten using Qt and python3 with better performances in bake process.
 A preset system has been added, see the presets section
 
 # How to use:
-Works only for rotations.
 1. Select all the controllers of the chain. Also works with only 1 controller
 2. Click create locator and align the created locator
 to the end of the chain to set its scale
@@ -79,7 +78,6 @@ window.show()
 
 '''
 
-
 import sys
 
 from functools import wraps
@@ -87,7 +85,7 @@ from PySide2 import QtWidgets, QtCore
 from PySide2.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
     QDoubleSpinBox, QSlider, QLabel, QComboBox, QListWidget, QAction, QMenu,
-    QCheckBox)
+    QCheckBox, QRadioButton)
 import maya.cmds as mc
 import maya.mel as mm
 
@@ -99,7 +97,7 @@ except ImportError:
 
 
 TOOLNAME = 'Spring_Tool'
-TOOL_VERSION = '1.2'
+TOOL_VERSION = '1.3'
 
 AIM_GRP_NAME = 'SPTL_aim_loc_GRP'
 PARTICLE_NAME = 'SPTL_particle'
@@ -107,6 +105,7 @@ LOCATOR_NAME = 'SPTL_spring_locator'
 LAYER_PREFIX = 'SPTL_layer'
 CTL_LOCATOR = 'SPTL_orig_pos_loc'
 SPTL_NODE_ATTR = 'Spring_tool_node'
+DEFAULT_SPRING_MODE = 'rotation'
 DEFAULT_SPRING_VALUE = 0.45
 DEFAULT_DECAY_VALUE = 1.2
 DEFAULT_RIGIDITY_VALUE = 7.0
@@ -118,6 +117,8 @@ AIM_VECTORS = {
             -2: ((0, -1, 0), (0, 0, 1)),
             -3: ((0, 0, -1), (1, 0, 0)),
         }
+ROTATION_MODE_OPTVAR = 'sptlRotationMode'
+TRANSLATION_MODE_OPTVAR = 'sptlTranslationMode'
 BAKE_ON_LAYERS_OPTVAR = 'sptlBakeOnAnimLayers'
 MERGE_LAYERS_OPTVAR = 'sptlMergeAnimLayers'
 
@@ -239,6 +240,20 @@ class SpringToolWindow(QMainWindow):
         self.main_split_layout = QHBoxLayout(central_widget)
         self.main_layout = QVBoxLayout()
 
+        self.radio_buttons_layout = QHBoxLayout()
+        self.rotation_mode_radio_button = QRadioButton('Rotation')
+        self.rotation_mode_radio_button.setChecked(True)
+        self.rotation_mode_radio_button.toggled.connect(
+            self.save_checkboxes_states)
+        self.translation_mode_radio_button = QRadioButton('translate')
+        self.translation_mode_radio_button.toggled.connect(
+            self.save_checkboxes_states)
+
+        self.radio_buttons_layout.addWidget(
+            self.rotation_mode_radio_button)
+        self.radio_buttons_layout.addWidget(
+            self.translation_mode_radio_button)
+
         self.locators_button = QPushButton('1. Create Locator')
         self.locators_button.clicked.connect(self.handle_locators_btn_clicked)
 
@@ -318,6 +333,7 @@ class SpringToolWindow(QMainWindow):
         bake_on_layer_option_layout.addWidget(
             self.merge_animation_layer_checkbox)
 
+        self.main_layout.addLayout(self.radio_buttons_layout)
         self.main_layout.addWidget(self.locators_button)
         self.main_layout.addWidget(self.previz_button)
         self.main_layout.addLayout(weight_layout)
@@ -368,23 +384,44 @@ class SpringToolWindow(QMainWindow):
         self.presets_main_layout.addStretch()
 
     def save_checkboxes_states(self):
-        # Get the current state of each checkbox
+        # Get the current state of each checkbox and radio button
+        rotation_mode_state = self.rotation_mode_radio_button.isChecked()
+        translation_mode_state = self.translation_mode_radio_button.isChecked()
         bake_on_layer_state = self.bake_on_layer_checkbox.isChecked()
         merge_layers_state = self.merge_animation_layer_checkbox.isChecked()
 
         # Save the states as integers
+        mc.optionVar(iv=(ROTATION_MODE_OPTVAR, int(rotation_mode_state)))
+        mc.optionVar(iv=(TRANSLATION_MODE_OPTVAR, int(translation_mode_state)))
         mc.optionVar(iv=(BAKE_ON_LAYERS_OPTVAR, int(bake_on_layer_state)))
         mc.optionVar(iv=(MERGE_LAYERS_OPTVAR, int(merge_layers_state)))
 
         self.merge_animation_layer_checkbox.setEnabled(bake_on_layer_state)
 
-
     def load_checkboxes_states(self):
         '''
         Load and set the checkbox states from optionVars.
         '''
+        self.rotation_mode_radio_button.blockSignals(True)
+        self.translation_mode_radio_button.blockSignals(True)
         self.bake_on_layer_checkbox.blockSignals(True)
         self.merge_animation_layer_checkbox.blockSignals(True)
+
+        if mc.optionVar(exists=ROTATION_MODE_OPTVAR):
+            rotation_mode_state = mc.optionVar(q=ROTATION_MODE_OPTVAR)
+            self.rotation_mode_radio_button.setChecked(
+                bool(rotation_mode_state)
+                )
+        else:
+            self.rotation_mode_radio_button.setChecked(False)
+
+        if mc.optionVar(exists=TRANSLATION_MODE_OPTVAR):
+            translation_mode_state = mc.optionVar(q=TRANSLATION_MODE_OPTVAR)
+            self.translation_mode_radio_button.setChecked(
+                bool(translation_mode_state)
+                )
+        else:
+            self.rotation_mode_radio_button.setChecked(False)
 
         if mc.optionVar(exists=BAKE_ON_LAYERS_OPTVAR):
             bake_on_layer_state = mc.optionVar(q=BAKE_ON_LAYERS_OPTVAR)
@@ -400,6 +437,8 @@ class SpringToolWindow(QMainWindow):
             self.merge_animation_layer_checkbox.setChecked(False)
 
         # Unblock signals after setting the states
+        self.rotation_mode_radio_button.blockSignals(False)
+        self.translation_mode_radio_button.blockSignals(False)
         self.bake_on_layer_checkbox.blockSignals(False)
         self.merge_animation_layer_checkbox.blockSignals(False)
 
@@ -460,7 +499,10 @@ class SpringToolWindow(QMainWindow):
         if not mc.objExists(AIM_GRP_NAME):
             mc.warning('Locator not found. Create and adjust locator first')
             return
-        self.setup_live_preview(self.rig_ctl_list)
+        if self.rotation_mode_radio_button.isChecked():
+            self.setup_live_preview(self.rig_ctl_list, mode='rotation')
+        else:
+            self.setup_live_preview(self.rig_ctl_list, mode='translation')
 
     def get_framerange(self):
         frame_in = mc.playbackOptions(minTime=True, query=True)
@@ -508,7 +550,6 @@ class SpringToolWindow(QMainWindow):
             if not mc.objExists(node):
                 continue
             mc.delete(node)
-        print('Spring Tool Nodes correctly removed')
         mc.undoInfo(cck=True)
 
     def clear_all(self):
@@ -558,11 +599,14 @@ class SpringToolWindow(QMainWindow):
         '''
         self.rig_ctl_list = mc.ls(selection=True)
         if not self.rig_ctl_list:
-            mc.warning('Please select at least one object')
             return
         self.create_locators(self.rig_ctl_list)
         self.set_values_from_preset()
-        self.setup_live_preview(self.rig_ctl_list)
+        if self.rotation_mode_radio_button.isChecked():
+            mode = 'rotation'
+        else:
+            mode = 'translation'
+        self.setup_live_preview(self.rig_ctl_list, mode=mode)
         self.launch_bake()
 
     def get_aim_loc_position(self):
@@ -587,6 +631,10 @@ class SpringToolWindow(QMainWindow):
         if not self.presets_file_path:
             return mc.warning(
                 'Path to presets not set/found.')
+        if self.rotation_mode_radio_button.isChecked():
+            spring_mode = 'rotation'
+        else:
+            spring_mode = 'translation'
         spring_value = self.spring_value_spinbox.value()
         rigidity_value = self.rigidity_value_spinbox.value()
         decay_value = self.decay_value_spinbox.value()
@@ -595,6 +643,7 @@ class SpringToolWindow(QMainWindow):
         self.preset_window = presets.SavePresetPopup(
             self,
             self.presets_file_path,
+            spring_mode,
             spring_value,
             rigidity_value,
             decay_value,
@@ -617,11 +666,19 @@ class SpringToolWindow(QMainWindow):
             character_name,
             preset_text
             )
-        spring_value = preset_values['spring_value']
-        spring_rigidity = preset_values['spring_rigidity']
-        decay = preset_values['decay']
-        position = preset_values['position']
+        spring_mode = preset_values.get(
+            'spring_mode', DEFAULT_SPRING_MODE)
+        spring_value = preset_values.get(
+            'spring_value', DEFAULT_SPRING_VALUE)
+        spring_rigidity = preset_values.get(
+            'spring_rigidity', DEFAULT_RIGIDITY_VALUE)
+        decay = preset_values.get('decay', DEFAULT_DECAY_VALUE)
+        position = preset_values.get('position', None)
 
+        if spring_mode == 'rotation' or spring_mode is None:
+            self.rotation_mode_radio_button.setChecked(True)
+        else:
+            self.translation_mode_radio_button.setChecked(True)
         self.spring_value_spinbox.setValue(spring_value)
         self.rigidity_value_spinbox.setValue(spring_rigidity)
         self.decay_value_spinbox.setValue(decay)
@@ -672,16 +729,20 @@ class SpringToolWindow(QMainWindow):
         return weight
 
     def update_overlap_weight(self):
-        if not mc.objExists(PARTICLE_NAME):
+        if not mc.objExists(f'{PARTICLE_NAME}*'):
             return
         weight = self.get_user_spring_weight()
-        mc.setAttr(f'{PARTICLE_NAME}.goalWeight[0]', weight)
+        particle_system_list = mc.ls(f'{PARTICLE_NAME}*', shapes=False)
+        for i in particle_system_list:
+            mc.setAttr(f'{i}.goalWeight[0]', weight)
 
     def update_rigidity_value(self):
-        if not mc.objExists(PARTICLE_NAME):
+        if not mc.objExists(f'{PARTICLE_NAME}*',):
             return
         value = self.rigidity_value_spinbox.value()
-        mc.setAttr(f'{PARTICLE_NAME}.goalSmoothness', 10-value)
+        particle_system_list = mc.ls(f'{PARTICLE_NAME}*', shapes=False)
+        for i in particle_system_list:
+            mc.setAttr(f'{i}.goalSmoothness', 10-value)
 
     def get_overlap_weight_math(self, spring_weight, decay):
         weight = float('{:.2f}'.format(spring_weight/decay))
@@ -706,76 +767,140 @@ class SpringToolWindow(QMainWindow):
         return node.split(':')[-1]
 
     @disable_viewport
-    def setup_live_preview(self, rig_ctl_list, spring_weight=None):
+    def setup_live_preview(
+        self,
+        rig_ctl_list,
+        mode=DEFAULT_SPRING_MODE,
+        spring_weight=None,
+            ):
+
         mc.undoInfo(ock=True)
+
         if mc.objExists(TOOLNAME):
             return mc.warning('Live preview already set')
-        # ROTATION MODE - AFFECT ONLY ROTATION ATTRIBUTES
-        tool_grp = mc.group(n=TOOLNAME, em=True)
-        add_bool_attr(tool_grp)
+
+        # Create tool group
+        tool_group = mc.group(n=TOOLNAME, em=True)
+        add_bool_attr(tool_group)
+
+        # Get frame range and set initial time
         frame_in, frame_out = self.get_framerange()
         mc.currentTime(frame_in, edit=True)
+
+        # Create locator and match its position to the first rig controller
         ctl_locator = mc.spaceLocator(n=CTL_LOCATOR)
         add_bool_attr(ctl_locator[0])
         sel_matrix = mc.xform(rig_ctl_list[0], q=True, ws=True, matrix=True)
         mc.xform(ctl_locator, ws=True, matrix=sel_matrix)
 
+        # Create particle system
         particle_system = mc.particle(p=[(0, 0, 0)], n=PARTICLE_NAME)
         add_bool_attr(particle_system[0])
 
-        # Align locator to first selected controller, bake, delete constraint
-        orig_sel_constraint = mc.parentConstraint(
-            self.aim_loc, ctl_locator, mo=False)
-        add_bool_attr(orig_sel_constraint[0])
-        self.bake_rot_trans_with_mel(ctl_locator)
-        mc.delete(orig_sel_constraint)
+        # Set up constraints and bake rotation/translation
+        if mode == 'translation':
+            # Setup for translation mode
+            parent_constraint = mc.parentConstraint(
+                self.rig_ctl_list[0],
+                ctl_locator
+                )
+            add_bool_attr(parent_constraint[0])
+            self.bake_rot_trans_with_mel(ctl_locator)
+            mc.delete(parent_constraint)
 
-        parent_constraint = mc.parentConstraint(
-            ctl_locator, PARTICLE_NAME, mo=False)
-        add_bool_attr(parent_constraint[0])
-        mc.delete(parent_constraint)
+            orig_sel_constraint = mc.parentConstraint(
+                ctl_locator,
+                particle_system[0],
+                mo=False
+                )
+            add_bool_attr(orig_sel_constraint[0])
+            mc.delete(orig_sel_constraint)
 
-        # Setup Spring weight
+            # Handle locked translation attributes
+            locked_rot_attr_list = self.get_locked_attr(rig_ctl_list[0], 't')
+
+        else:  # Rotation mode
+            # Align locator to the aim control and bake its rotation
+            orig_sel_constraint = mc.parentConstraint(
+                self.aim_loc,
+                ctl_locator,
+                mo=False
+                )
+            add_bool_attr(orig_sel_constraint[0])
+            self.bake_rot_trans_with_mel(ctl_locator)
+            mc.delete(orig_sel_constraint)
+
+            # Apply parent constraint from the locator to the particle
+            parent_constraint = mc.parentConstraint(
+                ctl_locator,
+                PARTICLE_NAME,
+                mo=False
+                )
+            add_bool_attr(parent_constraint[0])
+            mc.delete(parent_constraint)
+
+            # Handle locked rotation attributes
+            locked_rot_attr_list = self.get_locked_attr(rig_ctl_list[0], 'r')
+
+        # Setup spring weight
         if not spring_weight:
             spring_weight = self.get_user_spring_weight()
         goal = mc.goal(PARTICLE_NAME, g=ctl_locator, w=spring_weight)
         add_bool_attr(goal[0])
-        spring_loc_name = LOCATOR_NAME
         self.update_rigidity_value()
 
-        # Create Spring locator and link it to the particle node
+        # Create spring locator and connect it to the particle
+        spring_loc_name = LOCATOR_NAME
         spring_loc = mc.spaceLocator(n=spring_loc_name)
         add_bool_attr(spring_loc[0])
         scale = self.master_scale
         expression = (
-            f'{spring_loc_name}.tx = {PARTICLE_NAME}.wctx / {scale};'
-            f'{spring_loc_name}.ty = {PARTICLE_NAME}.wcty / {scale};'
-            f'{spring_loc_name}.tz = {PARTICLE_NAME}.wctz / {scale};'
-            )
+            f'{spring_loc_name}.tx = {PARTICLE_NAME}Shape.wctx / {scale};'
+            f'{spring_loc_name}.ty = {PARTICLE_NAME}Shape.wcty / {scale};'
+            f'{spring_loc_name}.tz = {PARTICLE_NAME}Shape.wctz / {scale};'
+        )
         mc.expression(object=spring_loc_name, string=expression)
 
-        point_constraint = mc.pointConstraint(
-            spring_loc, self.aim_loc[0], mo=True)
-        add_bool_attr(point_constraint[0])
-        mc.parent(ctl_locator, PARTICLE_NAME, spring_loc, tool_grp)
+        # Point constraint the spring locator to the rig control
+        if mode == 'translation':
+            point_constraint = mc.pointConstraint(
+                spring_loc,
+                rig_ctl_list[0],
+                mo=True,
+                skip=locked_rot_attr_list
+                )
+        else:
+            point_constraint = mc.pointConstraint(
+                spring_loc,
+                self.aim_loc[0],
+                mo=True
+                )
 
-        # BUILD AIM CONSTRAINT
-        direction = self.get_direction()
-        locked_rot_attr_list = self.get_locked_attr(rig_ctl_list[0], 'r')
-        aim_vector, up_vector = AIM_VECTORS[direction]
-        aim_constraint = mc.aimConstraint(
-            spring_loc[0],
-            rig_ctl_list[0],
-            aimVector=aim_vector,
-            upVector=up_vector,
-            worldUpVector=up_vector,
-            worldUpObject=(ctl_locator[0]),
-            worldUpType='objectrotation',
-            mo=True,
-            skip=locked_rot_attr_list,
+        add_bool_attr(point_constraint[0])
+
+        # Parent locator, particle, and spring locator under the tool group
+        mc.parent(ctl_locator, PARTICLE_NAME, spring_loc, tool_group)
+
+        if mode == 'rotation':
+            # Additional setup for rotation mode: Build aim constraint
+            direction = self.get_direction()
+            aim_vector, up_vector = AIM_VECTORS[direction]
+            aim_constraint = mc.aimConstraint(
+                spring_loc[0],
+                rig_ctl_list[0],
+                aimVector=aim_vector,
+                upVector=up_vector,
+                worldUpVector=up_vector,
+                worldUpObject=ctl_locator[0],
+                worldUpType='objectrotation',
+                mo=True,
+                skip=locked_rot_attr_list,
             )
-        add_bool_attr(aim_constraint[0])
+            add_bool_attr(aim_constraint[0])
+
+        # Set particle start frame
         mc.setAttr(f'{PARTICLE_NAME}.startFrame', frame_in)
+        # Enable undo info
         mc.undoInfo(cck=True)
 
     def move_to_pref_position(self, position):
@@ -810,6 +935,19 @@ class SpringToolWindow(QMainWindow):
             f'"{current_ctl}.rotate";'
         mm.eval(mel_command, lowestPriority=True)
 
+    @disable_viewport
+    def bake_translation_wilth_mel(self, current_ctl, layers=False):
+        frame_in, frame_out = self.get_framerange()
+        mel_command = 'bakeResults -simulation true '
+        if layers:
+            layer_name = (
+                f'{LAYER_PREFIX}_{self.get_node_shortname(current_ctl)}')
+            mel_command += f'-destinationLayer "{layer_name}"'
+        mel_command += f'-t "{frame_in}:{frame_out}" -sampleBy 1 ' \
+            f'-disableImplicitControl true -preserveOutsideKeys true ' \
+            f'"{current_ctl}.translate";'
+        mm.eval(mel_command, lowestPriority=True)
+
     def create_anim_layer(self, current_ctl):
         mc.select(current_ctl)
         layer_name = f'{LAYER_PREFIX}_{self.get_node_shortname(current_ctl)}'
@@ -825,7 +963,10 @@ class SpringToolWindow(QMainWindow):
         if self.bake_on_layer_checkbox.isChecked():
             self.create_anim_layer(current_ctl)
             layers = True
-        self.bake_rotation_with_mel(current_ctl, layers=layers)
+        if self.rotation_mode_radio_button.isChecked():
+            self.bake_rotation_with_mel(current_ctl, layers=layers)
+        else:
+            self.bake_translation_wilth_mel(current_ctl, layers=layers)
         self.clean_scene()
         return
 
@@ -853,6 +994,9 @@ class SpringToolWindow(QMainWindow):
 
     @disable_viewport
     def launch_bake(self):
+
+        rotation_mode = self.rotation_mode_radio_button.isChecked()
+
         mc.undoInfo(ock=True)
 
         if not mc.objExists(TOOLNAME):
@@ -866,7 +1010,6 @@ class SpringToolWindow(QMainWindow):
         self.switch_back_vp_eval('off')
         selected_rig_ctl = self.rig_ctl_list
         for i in range(len(selected_rig_ctl)):
-
             # BAKING FIRST CTL OF THE CHAIN
             if i == 0:
                 self.bake_ctl(current_ctl=selected_rig_ctl[i])
@@ -876,7 +1019,14 @@ class SpringToolWindow(QMainWindow):
             self.create_locators([selected_rig_ctl[i]])
             self.align_locator()
             spring_weight = self.get_overlap_weight_math(spring_weight, decay)
-            self.setup_live_preview([selected_rig_ctl[i]], (1-spring_weight))
+
+            mode = 'rotation' if rotation_mode else 'translation'
+            self.setup_live_preview(
+                [selected_rig_ctl[i]],
+                mode=mode,
+                spring_weight=(1 - spring_weight),
+            )
+
             self.bake_ctl(current_ctl=selected_rig_ctl[i])
 
         if self.merge_animation_layer_checkbox.isChecked():
