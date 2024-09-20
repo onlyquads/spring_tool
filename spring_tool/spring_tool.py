@@ -200,7 +200,7 @@ class SpringToolWindow(QMainWindow):
             parent = maya_main_window()
         super(SpringToolWindow, self).__init__(parent=parent)
 
-        self.setWindowTitle(TOOLNAME)
+        self.setWindowTitle(TOOLNAME.replace('_', ' '))
         self.setWindowFlags(QtCore.Qt.Tool)
         self.lock_write_presets = lock_write_presets
 
