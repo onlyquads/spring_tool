@@ -369,7 +369,7 @@ class SpringToolWindow(QMainWindow):
         self.body_parts_list.customContextMenuRequested.connect(self.show_menu)
         self.body_parts_list_menu.addAction(do_magic_action)
         do_magic_action.triggered.connect(self.launch_all)
-        self.body_parts_list.setFixedHeight(154)
+        self.body_parts_list.setFixedHeight(159)
 
         # Populate the combo-box and list
         self.refresh_characters_combobox()
