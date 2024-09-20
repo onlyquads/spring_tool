@@ -205,7 +205,7 @@ class SpringToolWindow(QMainWindow):
         self.lock_write_presets = lock_write_presets
 
         self.ui_main()
-        self.load_checkboxes_states()
+        self.load_preferences_states()
 
         if presets:
             self.presets_file_path = presets.get_presets_file_path(
@@ -243,10 +243,10 @@ class SpringToolWindow(QMainWindow):
         self.rotation_mode_radio_button = QRadioButton('Rotation')
         self.rotation_mode_radio_button.setChecked(True)
         self.rotation_mode_radio_button.toggled.connect(
-            self.save_checkboxes_states)
-        self.translation_mode_radio_button = QRadioButton('Translate')
+            self.save_preferences_states)
+        self.translation_mode_radio_button = QRadioButton('Translation')
         self.translation_mode_radio_button.toggled.connect(
-            self.save_checkboxes_states)
+            self.save_preferences_states)
 
         self.radio_buttons_layout.addWidget(
             self.rotation_mode_radio_button)
@@ -304,11 +304,11 @@ class SpringToolWindow(QMainWindow):
         bake_on_layer_option_layout = QHBoxLayout()
         self.bake_on_layer_checkbox = QCheckBox('Bake on layers')
         self.bake_on_layer_checkbox.stateChanged.connect(
-            self.save_checkboxes_states)
+            self.save_preferences_states)
 
         self.merge_animation_layer_checkbox = QCheckBox('Merge layers')
         self.merge_animation_layer_checkbox.stateChanged.connect(
-            self.save_checkboxes_states)
+            self.save_preferences_states)
 
         self.bake_button = QPushButton('3. Bake!')
         self.bake_button.clicked.connect(self.launch_bake)
@@ -382,7 +382,7 @@ class SpringToolWindow(QMainWindow):
         self.main_split_layout.addLayout(self.presets_main_layout, 1)
         self.presets_main_layout.addStretch()
 
-    def save_checkboxes_states(self):
+    def save_preferences_states(self):
         # Get the current state of each checkbox and radio button
         rotation_mode_state = self.rotation_mode_radio_button.isChecked()
         translation_mode_state = self.translation_mode_radio_button.isChecked()
@@ -397,7 +397,7 @@ class SpringToolWindow(QMainWindow):
 
         self.merge_animation_layer_checkbox.setEnabled(bake_on_layer_state)
 
-    def load_checkboxes_states(self):
+    def load_preferences_states(self):
         '''
         Load and set the checkbox states from optionVars.
         '''
