@@ -150,7 +150,6 @@ def disable_viewport(func):
             mc.warning(Exception)
         finally:
             mm.eval("paneLayout -e -manage true $gMainPane")
-
     return wrap
 
 
@@ -245,7 +244,7 @@ class SpringToolWindow(QMainWindow):
         self.rotation_mode_radio_button.setChecked(True)
         self.rotation_mode_radio_button.toggled.connect(
             self.save_checkboxes_states)
-        self.translation_mode_radio_button = QRadioButton('translate')
+        self.translation_mode_radio_button = QRadioButton('Translate')
         self.translation_mode_radio_button.toggled.connect(
             self.save_checkboxes_states)
 
@@ -689,7 +688,6 @@ class SpringToolWindow(QMainWindow):
         self.rig_ctl_list = []
         self.rig_ctl_list = sorted(selected_rig_ctl_list)
         aim_loc_grp = mc.group(name=AIM_GRP_NAME, empty=True)
-        # Add custom string attribute
         add_bool_attr(aim_loc_grp)
         mc.parent(aim_loc_grp, self.rig_ctl_list[0], relative=True)
         sel_matrix = mc.xform(
