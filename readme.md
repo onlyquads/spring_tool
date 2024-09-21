@@ -5,7 +5,7 @@ Rewritten using Qt and python3 with better performances in bake process.
 A preset system has been added, see the presets section
 
 <div style="text-align: center;">
-    <img src="https://garcia-nicolas.com/wp-content/uploads/2024/08/spring_tool_main-e1723926090389.png" alt="spring tool ui screenshot" width="300"/>
+    <img src="https://garcia-nicolas.com/wp-content/uploads/2024/09/spring_tool.png" alt="spring tool ui screenshot" width="300"/>
 </div>
 
 [Watch a Quick Tutorial](https://garcia-nicolas.com/download/3147/?tmstv=1713513016&v=3148)
