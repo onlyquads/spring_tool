@@ -70,6 +70,9 @@ class SpringToolPresetAdmin(QWidget):
         self.tree_view.setSortingEnabled(True)
         self.model.sort(0, QtCore.Qt.AscendingOrder)
 
+        self.tree_view.selectionModel().selectionChanged.connect(
+            self.check_item_level)
+
         # Layout
         self.qtree_layout = QVBoxLayout()
         self.qtree_layout.addWidget(self.tree_view)
@@ -118,6 +121,32 @@ class SpringToolPresetAdmin(QWidget):
         self.tree_view.setSortingEnabled(True)
         self.model.sort(0, QtCore.Qt.AscendingOrder)
 
+    def load_preset_admin_ui(self):
+        layout = QVBoxLayout(self)
+
+        self.presets_main_layout = QVBoxLayout()
+        self.load_qtree_view()
+        self.presets_main_layout.addWidget(self.tree_view)
+        presets_options_layout = QHBoxLayout()
+        self.refresh_button = QPushButton('Refresh')
+        self.refresh_button.clicked.connect(self.refresh_qtree)
+
+        self.edit_preset_value_button = QPushButton('Edit Preset Values')
+        self.edit_preset_value_button.setEnabled(False)
+        self.edit_preset_value_button.clicked.connect(self.edit_preset_clicked)
+        edit_name_button = QPushButton('Edit Preset Name')
+        edit_name_button.clicked.connect(self.edit_name_clicked)
+        remove_preset_button = QPushButton('Remove')
+        remove_preset_button.clicked.connect(self.remove_selected_preset)
+        presets_options_layout.addWidget(self.edit_preset_value_button)
+        presets_options_layout.addWidget(edit_name_button)
+        layout.addLayout(self.presets_main_layout)
+        layout.addLayout(presets_options_layout)
+        layout.addWidget(remove_preset_button)
+        layout.addWidget(self.refresh_button)
+
+        layout.addStretch()
+
     def get_selected_item(self):
 
         # Get the selected item
@@ -139,32 +168,26 @@ class SpringToolPresetAdmin(QWidget):
 
         return parent_text, item_text
 
-    def load_preset_admin_ui(self):
-        layout = QVBoxLayout(self)
+    def check_item_level(self):
+        """
+        Enable the button if a second-level item is selected.
+        Disable it if a first-level item is selected.
+        """
+        # Get the selected indexes
+        selected_indexes = self.tree_view.selectionModel().selectedIndexes()
 
-        self.presets_main_layout = QVBoxLayout()
-        self.load_qtree_view()
-        self.presets_main_layout.addWidget(self.tree_view)
-        presets_options_layout = QHBoxLayout()
-        self.refresh_button = QPushButton('Refresh')
-        self.refresh_button.clicked.connect(self.refresh_qtree)
+        if not selected_indexes:
+            return
 
-        edit_preset_value_button = QPushButton('Edit Preset Values')
-        edit_preset_value_button.clicked.connect(self.edit_preset_clicked)
-        edit_name_button = QPushButton('Edit Preset Name')
-        edit_name_button.clicked.connect(self.edit_name_clicked)
-        remove_preset_button = QPushButton('Remove')
-        remove_preset_button.clicked.connect(self.remove_selected_preset)
+        # Get the first selected item
+        index = selected_indexes[0]
 
-        presets_options_layout.addWidget(edit_preset_value_button)
-        presets_options_layout.addWidget(edit_name_button)
-
-        layout.addLayout(self.presets_main_layout)
-        layout.addLayout(presets_options_layout)
-        layout.addWidget(remove_preset_button)
-        layout.addWidget(self.refresh_button)
-
-        layout.addStretch()
+        # Check if the selected item has a parent
+        # QtCore.QModelIndex() means it's a first-level item
+        if index.parent() == QtCore.QModelIndex():
+            self.edit_preset_value_button.setEnabled(False)
+        else:
+            self.edit_preset_value_button.setEnabled(True)
 
     def edit_preset_clicked(self):
         self.show_saved_preset_popup()
@@ -190,7 +213,6 @@ class SpringToolPresetAdmin(QWidget):
             character_name,
             body_part_name
             )
-
         print('Removing Presets')
         self.refresh_qtree()
 
@@ -231,15 +253,12 @@ class SpringToolPresetAdmin(QWidget):
     def edit_name_clicked(self):
         print('Edit name pressed')
         parent_text, item_text = self.get_selected_item()
-        self.rename_preset_window = presets.EditPresetNamePopup(
-            self,
+        self.rename_preset_window = presets.rename_preset_pressed(
             self.presets_file_path,
             parent_text,
-            item_text
-
-            )
-        self.rename_preset_window.refresh_signal.connect(self.refresh_qtree)
-        self.rename_preset_window.show()
+            item_text,
+            on_complete=self.refresh_qtree
+        )
 
     def show_saved_preset_popup(self):
         '''
@@ -256,10 +275,12 @@ class SpringToolPresetAdmin(QWidget):
 
         char_name = parent_item
         body_part_name = item_text
-        spring_mode, spring_value, spring_rigidity, decay, pos = presets.get_all_data(
-            path=self.presets_file_path,
-            character_name=char_name,
-            body_part=body_part_name
+        spring_mode, spring_value, spring_rigidity, decay, pos = (
+            presets.get_all_data(
+                path=self.presets_file_path,
+                character_name=char_name,
+                body_part=body_part_name
+            )
         )
 
         self.preset_window = presets.SavePresetPopup(

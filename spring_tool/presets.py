@@ -4,10 +4,15 @@ Handle json save, search and get
 
 import json
 import os
+import re
 from PySide2.QtWidgets import (
-    QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
+    QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QInputDialog,
     QDoubleSpinBox, QLabel, QLineEdit, QMessageBox, QRadioButton)
 from PySide2 import QtCore
+
+
+EMPTY_LINE_TEXT = '----------'
+ADD_NEW_CHARACTER_TEXT = ' - Add new character -'
 
 
 def show_error_message(message):
@@ -267,70 +272,88 @@ def edit_preset(
         json.dump(presets, f, indent=4)
 
 
-class EditPresetNamePopup(QWidget):
+def name_input_dialog(existing_names, default_name='Character Name'):
+    '''
+    Show a popup window that asks for a name and checks against existing names.
+    :param existing_names: A list of names that are already taken.
+    :param default_name: Default name to display in the input dialog.
+    :return: The entered name if valid, otherwise None.
+    '''
 
-    refresh_signal = QtCore.Signal()
+    # Function to handle text changed event to auto correct ' ' to '_'
+    def handle_text_changed():
+        # Get the current text
+        text_value = input_dialog.textValue()
+        # Update the text in the input dialog
+        input_dialog.setTextValue(text_value)
 
-    def __init__(
-            self,
-            main_window,
-            presets_path,
-            parent_text,
-            item_text,
-            parent=None,
-            ):
+    # Open the input dialog
+    input_dialog = QInputDialog()
+    input_dialog.setWindowTitle('Preset Name')
+    input_dialog.setLabelText('Enter Name')
+    input_dialog.setTextValue(default_name)
 
-        super().__init__(parent=parent)
+    # Connect textChanged signal to handle_text_changed function
+    input_dialog.textValueChanged.connect(handle_text_changed)
 
-        self.setWindowTitle("Edit Preset Name")
-        self.setWindowModality(QtCore.Qt.ApplicationModal)
-        self.main_window = main_window
-        self.presets_file_path = presets_path
-        self.presets = load_presets(presets_path)
-        self.parent_text = parent_text
-        self.item_text = item_text
-        self.load_preset_name_popup_ui()
+    # Show the input dialog and get the result
+    ok = input_dialog.exec_()
+    text = input_dialog.textValue()
 
-    def load_preset_name_popup_ui(self):
-        layout = QVBoxLayout()
+    # Check if the user clicked 'OK' and entered a value
+    if ok and text:
+        # Validate input: no spaces or special characters allowed
+        if not re.match("^[a-zA-Z0-9_]+$", text):
+            QMessageBox.warning(
+                None,
+                "Invalid Input",
+                "Name must contain only letters, numbers, or underscores.")
+            return None
 
-        # Character Name
-        text_to_rename_layout = QHBoxLayout()
-        rename_label = QLabel("Rename:")
-        self.text_to_rename_line_edit = QLineEdit()
-        text_to_rename_layout.addWidget(rename_label)
-        text_to_rename_layout.addWidget(self.text_to_rename_line_edit)
-        layout.addLayout(text_to_rename_layout)
-        self.text_to_rename_line_edit.setText(self.item_text)
+        # Check if the name is already taken
+        if text in existing_names:
+            QMessageBox.warning(
+                None,
+                "Name Taken",
+                "This name is already taken. Please choose a different name.")
+            return None
 
-        # Buttons
-        button_layout = QHBoxLayout()
-        confirm_button = QPushButton("Confirm")
-        confirm_button.clicked.connect(self.rename_preset_pressed)
-        cancel_button = QPushButton("Cancel")
-        cancel_button.clicked.connect(self.close)
-        button_layout.addWidget(confirm_button)
-        button_layout.addWidget(cancel_button)
-        layout.addLayout(button_layout)
-        self.setLayout(layout)
+        # If all validations pass, print and return the name
+        print('Entered Name:', text)
+        return text
+    else:
+        return None
 
-    def rename_preset_pressed(self):
 
-        item_text = self.item_text
-        parent_text = self.parent_text
-        new_item_name = self.text_to_rename_line_edit.text()
+def rename_preset_pressed(
+        presets_path,
+        parent_text,
+        item_text,
+        on_complete=None
+        ):
 
-        # Read JSON data from file
-        with open(self.presets_file_path, 'r') as file:
-            json_data = json.load(file)
+    current_name = item_text
+    saved_preset_list = get_available_body_parts(
+        presets_path, parent_text)
+    if not parent_text:
+        saved_preset_list = get_available_characters(presets_path)
 
-        rename_key(json_data, item_text, new_item_name, parent_text)
+    new_preset_name = name_input_dialog(saved_preset_list, current_name)
+    if not new_preset_name:
+        return
 
-        # Save updated JSON data back to the file
-        with open(self.presets_file_path, 'w') as file:
-            json.dump(json_data, file, indent=4)
-        self.refresh_signal.emit()
-        self.close()
+    # Read JSON data from file
+    with open(presets_path, 'r') as file:
+        json_data = json.load(file)
+
+    rename_key(json_data, item_text, new_preset_name, parent_text)
+
+    # Save updated JSON data back to the file
+    with open(presets_path, 'w') as file:
+        json.dump(json_data, file, indent=4)
+
+    if on_complete:
+        on_complete()
 
 
 class SavePresetPopup(QWidget):
@@ -371,11 +394,11 @@ class SavePresetPopup(QWidget):
         else:
             self.translation_mode_radio.setChecked(True)
         if char_name:
-            self.character_line_edit.setText(char_name)
+            self.character_name_combobox.setCurrentText(char_name)
         if body_part:
             self.body_part_line_edit.setText(body_part)
         if edit_mode:
-            self.character_line_edit.setEnabled(False)
+            self.character_name_combobox.setEnabled(False)
             self.body_part_line_edit.setEnabled(False)
 
     def load_preset_popup_ui(self):
@@ -392,12 +415,16 @@ class SavePresetPopup(QWidget):
         layout.addLayout(spring_mode_layout)
 
         # Character Name
-        text_to_rename_layout = QHBoxLayout()
+        char_name_layout = QHBoxLayout()
         character_label = QLabel("Character Name:")
-        self.character_line_edit = QLineEdit()
-        text_to_rename_layout.addWidget(character_label)
-        text_to_rename_layout.addWidget(self.character_line_edit)
-        layout.addLayout(text_to_rename_layout)
+        self.character_name_combobox = QComboBox()
+        char_name_layout.addWidget(character_label)
+        char_name_layout.addWidget(self.character_name_combobox)
+        layout.addLayout(char_name_layout)
+        self.populate_characters_combobox()
+        self.character_name_combobox.currentIndexChanged.connect(
+            self.character_combobox_changed
+        )
 
         # Body Part
         body_part_layout = QHBoxLayout()
@@ -470,9 +497,40 @@ class SavePresetPopup(QWidget):
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
+    def populate_characters_combobox(self):
+        '''
+        Populate the characters available in the pref file. Or ask for a
+        new name
+        '''
+
+        self.character_name_combobox.clear()
+        saved_char_list = get_available_characters(self.presets_file_path)
+        if not saved_char_list:
+            return
+        if saved_char_list:
+            saved_char_list.sort()
+        for char in saved_char_list:
+            self.character_name_combobox.addItem(char)
+        empty_line_text = EMPTY_LINE_TEXT
+        self.character_name_combobox.addItem(empty_line_text)
+        add_new_character_name_text = ADD_NEW_CHARACTER_TEXT
+        self.character_name_combobox.addItem(add_new_character_name_text)
+
+    def character_combobox_changed(self):
+        saved_char_list = get_available_characters(self.presets_file_path)
+        current_combobox_item = self.character_name_combobox.currentText()
+        if current_combobox_item == ADD_NEW_CHARACTER_TEXT:
+            new_character_name = name_input_dialog(saved_char_list)
+            if not new_character_name:
+                self.character_name_combobox.setCurrentText(EMPTY_LINE_TEXT)
+                return
+            self.character_name_combobox.addItem(new_character_name)
+            self.character_name_combobox.setCurrentText(new_character_name)
+        return
+
     def save_preset_pressed(self):
 
-        character_name = self.character_line_edit.text()
+        character_name = self.character_name_combobox.currentText()
         body_part = self.body_part_line_edit.text()
 
         if self.rotation_mode_radio.isChecked():

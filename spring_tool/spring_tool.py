@@ -214,7 +214,7 @@ class SpringToolWindow(QMainWindow):
                 presets_filename
             )
             if self.presets_file_path:
-                self.ui_presets()
+                self.presets_ui()
 
         self.master_scale = 1.0
         self.axes = [0, 0, 0]
@@ -344,7 +344,7 @@ class SpringToolWindow(QMainWindow):
         self.main_layout.addWidget(self.remove_setup_button)
         self.main_split_layout.addLayout(self.main_layout, 2)
 
-    def ui_presets(self):
+    def presets_ui(self):
         '''
         UI for the right panel of the tool
         '''
@@ -571,10 +571,10 @@ class SpringToolWindow(QMainWindow):
         self.character_combo.clear()
         saved_char_list = presets.get_available_characters(
             self.presets_file_path)
-        if saved_char_list:
-            saved_char_list.sort()
         if not saved_char_list:
             return
+        if saved_char_list:
+            saved_char_list.sort()
         for char in saved_char_list:
             self.character_combo.addItem(char)
         self.body_parts_list.itemDoubleClicked.connect(
