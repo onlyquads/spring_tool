@@ -311,7 +311,7 @@ def name_input_dialog(existing_names, default_name='Character Name'):
             return None
 
         # Check if the name is already taken
-        if text in existing_names:
+        if text.lower() in [name.lower() for name in existing_names]:
             QMessageBox.warning(
                 None,
                 "Name Taken",
@@ -532,6 +532,16 @@ class SavePresetPopup(QWidget):
 
         character_name = self.character_name_combobox.currentText()
         body_part = self.body_part_line_edit.text()
+
+        saved_names_list = get_available_body_parts(
+            self.presets_file_path, character_name)
+
+        if body_part.lower() in [name.lower() for name in saved_names_list]:
+            QMessageBox.warning(
+                None,
+                "Name Taken",
+                "This name is already taken. Please choose a different name.")
+            return
 
         if self.rotation_mode_radio.isChecked():
             spring_mode = 'rotation'
