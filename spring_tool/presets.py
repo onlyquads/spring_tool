@@ -310,6 +310,9 @@ def name_input_dialog(existing_names, default_name='Character Name'):
                 "Name must contain only letters, numbers, or underscores.")
             return None
 
+        if not existing_names:
+            return text
+
         # Check if the name is already taken
         if text.lower() in [name.lower() for name in existing_names]:
             QMessageBox.warning(
@@ -505,12 +508,10 @@ class SavePresetPopup(QWidget):
 
         self.character_name_combobox.clear()
         saved_char_list = get_available_characters(self.presets_file_path)
-        if not saved_char_list:
-            return
         if saved_char_list:
             saved_char_list.sort()
-        for char in saved_char_list:
-            self.character_name_combobox.addItem(char)
+            for char in saved_char_list:
+                self.character_name_combobox.addItem(char)
         empty_line_text = EMPTY_LINE_TEXT
         self.character_name_combobox.addItem(empty_line_text)
         add_new_character_name_text = ADD_NEW_CHARACTER_TEXT
@@ -533,15 +534,16 @@ class SavePresetPopup(QWidget):
         character_name = self.character_name_combobox.currentText()
         body_part = self.body_part_line_edit.text()
 
-        saved_names_list = get_available_body_parts(
+        saved_names = get_available_body_parts(
             self.presets_file_path, character_name)
 
-        if body_part.lower() in [name.lower() for name in saved_names_list]:
-            QMessageBox.warning(
-                None,
-                "Name Taken",
-                "This name is already taken. Please choose a different name.")
-            return
+        if saved_names:
+            if body_part.lower() in [name.lower() for name in saved_names]:
+                QMessageBox.warning(
+                    None,
+                    "Name Taken",
+                    "This name is already taken. Please choose a different name.")
+                return
 
         if self.rotation_mode_radio.isChecked():
             spring_mode = 'rotation'
