@@ -1,7 +1,3 @@
-'''
-Handle json save, search and get
-'''
-
 import json
 import os
 import re
@@ -50,7 +46,7 @@ def create_preset_file(path, filename):
     If no preset file found but path is set, ask the user to create the file
     automatically
     '''
-    message = "'No preset file found. Would you like to create one?'"
+    message = "No preset file found. Would you like to create one?"
     if not show_warning_message(message):
         return None
 
@@ -505,7 +501,6 @@ class SavePresetPopup(QWidget):
         Populate the characters available in the pref file. Or ask for a
         new name
         '''
-
         self.character_name_combobox.clear()
         saved_char_list = get_available_characters(self.presets_file_path)
         if saved_char_list:
@@ -537,12 +532,13 @@ class SavePresetPopup(QWidget):
         saved_names = get_available_body_parts(
             self.presets_file_path, character_name)
 
-        if saved_names:
+        if saved_names and not self.edit_mode:
             if body_part.lower() in [name.lower() for name in saved_names]:
                 QMessageBox.warning(
                     None,
                     "Name Taken",
-                    "This name is already taken. Please choose a different name.")
+                    "This name is already taken. "
+                    "Please choose a different name.")
                 return
 
         if self.rotation_mode_radio.isChecked():

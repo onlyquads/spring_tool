@@ -1,7 +1,3 @@
-'''
-This part is still wip. Presets will show up but edition doesn't work
-'''
-
 from PySide2 import QtCore
 from PySide2.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
