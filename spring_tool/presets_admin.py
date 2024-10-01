@@ -128,10 +128,11 @@ class SpringToolPresetAdmin(QWidget):
         self.refresh_button.clicked.connect(self.refresh_qtree)
 
         self.edit_preset_value_button = QPushButton('Edit Preset Values')
+        self.edit_preset_value_button.clicked.connect(
+            self.edit_saved_preset_pressed)
         self.edit_preset_value_button.setEnabled(False)
-        self.edit_preset_value_button.clicked.connect(self.edit_preset_clicked)
         edit_name_button = QPushButton('Edit Preset Name')
-        edit_name_button.clicked.connect(self.edit_name_clicked)
+        edit_name_button.clicked.connect(self.rename_presset_pressed)
         remove_preset_button = QPushButton('Remove')
         remove_preset_button.clicked.connect(self.remove_selected_preset)
         presets_options_layout.addWidget(self.edit_preset_value_button)
@@ -185,41 +186,20 @@ class SpringToolPresetAdmin(QWidget):
         else:
             self.edit_preset_value_button.setEnabled(True)
 
-    def edit_preset_clicked(self):
-        self.show_saved_preset_popup()
-
     def remove_selected_preset(self):
         parent_name, item_text = self.get_selected_item()
+
         if not item_text:
-            mc.warning('No preset selected')
-            return
-        message = 'Are you sure you want to remove this preset?'
-        if presets.show_warning_message(message):
-            if parent_name:
-                self.remove_preset_clicked(parent_name, item_text)
-                return
-            self.remove_name_preset_clicked(item_text)
-        self.refresh_qtree()
+            return mc.warning('No preset selected')
 
-    def remove_preset_clicked(self, parent_name, preset_name):
-        character_name = parent_name
-        body_part_name = preset_name
-        presets.remove_preset(
-            self.presets_file_path,
-            character_name,
-            body_part_name
+        if presets.show_warning_message(
+            'Are you sure you want to remove this preset?'):
+            presets.remove_preset(
+                self.presets_file_path,
+                character_name=parent_name or item_text,
+                body_part=None if not parent_name else item_text
             )
-        print('Removing Presets')
-        self.refresh_qtree()
-
-    def remove_name_preset_clicked(self, item_text):
-        character_name = item_text
-        presets.remove_preset(
-            self.presets_file_path,
-            character_name,
-            body_part=None
-        )
-        print('removing character name')
+            self.refresh_qtree()
 
     def on_character_changed(self):
         '''refresh the available body parts in UI list'''
@@ -246,8 +226,7 @@ class SpringToolPresetAdmin(QWidget):
         for char in saved_char_list:
             self.character_combo.addItem(char)
 
-    def edit_name_clicked(self):
-        print('Edit name pressed')
+    def rename_presset_pressed(self):
         parent_text, item_text = self.get_selected_item()
         presets.rename_preset(
             self.presets_file_path,
@@ -256,7 +235,7 @@ class SpringToolPresetAdmin(QWidget):
             )
         self.refresh_qtree()
 
-    def show_saved_preset_popup(self):
+    def edit_saved_preset_pressed(self):
         '''
         show the save preset popup window.
         Store existing main UI's values and pass it to the popup window
