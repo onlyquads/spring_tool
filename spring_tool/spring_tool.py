@@ -362,9 +362,10 @@ class SpringToolWindow(QMainWindow):
             save_preset_button.setDisabled(True)
 
         self.body_parts_list_menu = QMenu()
+        # Handle right click on QMenuList item
         do_magic_action = QAction("Do Magic!", self)
         self.body_parts_list = QListWidget()
-        # Handle right click on QMenuList item
+
         self.body_parts_list.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.body_parts_list.customContextMenuRequested.connect(self.show_menu)
         self.body_parts_list_menu.addAction(do_magic_action)
