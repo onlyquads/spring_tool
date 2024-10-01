@@ -324,11 +324,10 @@ def name_input_dialog(existing_names, default_name='Character Name'):
         return None
 
 
-def rename_preset_pressed(
+def rename_preset(
         presets_path,
         parent_text,
-        item_text,
-        on_complete=None
+        item_text
         ):
 
     current_name = item_text
@@ -350,9 +349,6 @@ def rename_preset_pressed(
     # Save updated JSON data back to the file
     with open(presets_path, 'w') as file:
         json.dump(json_data, file, indent=4)
-
-    if on_complete:
-        on_complete()
 
 
 class SavePresetPopup(QWidget):

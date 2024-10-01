@@ -249,12 +249,12 @@ class SpringToolPresetAdmin(QWidget):
     def edit_name_clicked(self):
         print('Edit name pressed')
         parent_text, item_text = self.get_selected_item()
-        presets.rename_preset_pressed(
+        presets.rename_preset(
             self.presets_file_path,
             parent_text,
             item_text,
-            on_complete=self.refresh_qtree
-        )
+            )
+        self.refresh_qtree()
 
     def show_saved_preset_popup(self):
         '''
