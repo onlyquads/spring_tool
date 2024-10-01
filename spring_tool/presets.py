@@ -130,54 +130,26 @@ def get_available_body_parts(path, character_name):
     return list(presets.get(character_name, {}).keys())
 
 
-def save_preset(
-        path,
-        character_name,
-        body_part,
-        spring_mode,
-        spring,
-        spring_rigidity,
-        decay,
-        position
-        ):
-    presets = load_presets(path)
-    if character_name not in presets:
-        presets[character_name] = {}
-    if body_part in presets.get(character_name, {}):
-        raise ValueError(
-            f"Body part '{body_part}' already exists for '{character_name}'")
-    presets[character_name][body_part] = {
-        'spring_mode': spring_mode,
-        'spring_value': spring,
-        'spring_rigidity': spring_rigidity,
-        'decay': decay,
-        'position': position
-    }
-    with open(path, 'w') as f:
-        json.dump(presets, f, indent=4)
-
-
 def get_all_data(path, character_name, body_part):
     presets = load_presets(path)
 
     # Validate the presence of necessary data
     if not presets:
-        return None, None, None, None
+        return None, None, None, None, None
 
     character_data = presets.get(character_name)
     if not character_data:
-        return None, None, None, None
+        return None, None, None, None, None
 
     body_part_data = character_data.get(body_part)
     if not body_part_data or not isinstance(body_part_data, dict):
-        return None, None, None, None
+        return None, None, None, None, None
 
-    # Extract relevant data
+    # Extract needed datas
     spring_mode = body_part_data.get('spring_mode')
     spring_value = body_part_data.get('spring_value')
     spring_rigidity = body_part_data.get('spring_rigidity')
     decay = body_part_data.get('decay')
-
     pos_data = body_part_data.get('position')
     position = [(pos_data[0], pos_data[1], pos_data[2])] if pos_data else None
 
@@ -240,34 +212,6 @@ def rename_key(json_data, old_key, new_key, parent_text=None):
     return json_data
 
 
-def edit_preset(
-        path,
-        character_name,
-        body_part,
-        spring_mode=None,
-        spring=None,
-        spring_rigidity=None,
-        decay=None,
-        position=None
-        ):
-    presets = load_presets(path)
-
-    preset = presets[character_name][body_part]
-    if spring_mode is not None:
-        preset['spring_mode'] = spring_mode
-    if spring is not None:
-        preset['spring_value'] = spring
-    if spring_rigidity is not None:
-        preset['spring_rigidity'] = spring_rigidity
-    if decay is not None:
-        preset['decay'] = decay
-    if position is not None:
-        preset['position'] = position
-
-    with open(path, 'w') as f:
-        json.dump(presets, f, indent=4)
-
-
 def name_input_dialog(existing_names, default_name='Character Name'):
     '''
     Show a popup window that asks for a name and checks against existing names.
@@ -316,9 +260,7 @@ def name_input_dialog(existing_names, default_name='Character Name'):
                 "Name Taken",
                 "This name is already taken. Please choose a different name.")
             return None
-
-        # If all validations pass, print and return the name
-        print('Entered Name:', text)
+        # If all validations pass, return the name
         return text
     else:
         return None
@@ -349,6 +291,48 @@ def rename_preset(
     # Save updated JSON data back to the file
     with open(presets_path, 'w') as file:
         json.dump(json_data, file, indent=4)
+
+
+def save_preset(
+        path,
+        character_name,
+        body_part,
+        spring_mode=None,
+        spring=None,
+        spring_rigidity=None,
+        decay=None,
+        position=None,
+        overwrite=False
+        ):
+    presets = load_presets(path)
+
+    if character_name not in presets:
+        presets[character_name] = {}
+
+    if body_part in presets[character_name] and not overwrite:
+        raise ValueError(
+            f"Body part '{body_part}' already exists for '{character_name}'")
+
+    # Retrieve the existing preset if it exists, else create a new one
+    preset = presets[character_name].get(body_part, {})
+
+    # Update values if they are provided
+    if spring_mode is not None:
+        preset['spring_mode'] = spring_mode
+    if spring is not None:
+        preset['spring_value'] = spring
+    if spring_rigidity is not None:
+        preset['spring_rigidity'] = spring_rigidity
+    if decay is not None:
+        preset['decay'] = decay
+    if position is not None:
+        preset['position'] = position
+
+    # Save the updated or new preset back to the dictionary
+    presets[character_name][body_part] = preset
+
+    with open(path, 'w') as f:
+        json.dump(presets, f, indent=4)
 
 
 class SavePresetPopup(QWidget):
@@ -550,29 +534,15 @@ class SavePresetPopup(QWidget):
         position_z = self.position_tz_spinbox.value()
         position = [position_x, position_y, position_z]
 
-        print("Character Name:", character_name)
-        print("Body Part Name:", body_part)
-        print("Spring Mode", spring_mode)
-        print("Spring:", spring)
-        print("Rigidity:", rigidity)
-        print("Decay:", decay)
-        print("position", position)
+        # print("Character Name:", character_name)
+        # print("Body Part Name:", body_part)
+        # print("Spring Mode", spring_mode)
+        # print("Spring:", spring)
+        # print("Rigidity:", rigidity)
+        # print("Decay:", decay)
+        # print("position", position)
 
-        if not self.edit_mode:
-            save_preset(
-                self.presets_file_path,
-                character_name,
-                body_part,
-                spring_mode,
-                spring,
-                rigidity,
-                decay,
-                position)
-            self.close()
-            self.refresh_signal.emit()
-            return
-
-        edit_preset(
+        save_preset(
             self.presets_file_path,
             character_name,
             body_part,
@@ -580,6 +550,7 @@ class SavePresetPopup(QWidget):
             spring,
             rigidity,
             decay,
-            position)
+            position,
+            overwrite=self.edit_mode)
         self.close()
         self.refresh_signal.emit()
