@@ -574,8 +574,7 @@ class SpringToolWindow(QMainWindow):
             self.presets_file_path)
         if not saved_char_list:
             return
-        if saved_char_list:
-            saved_char_list.sort()
+        saved_char_list.sort()
         for char in saved_char_list:
             self.character_combo.addItem(char)
         self.body_parts_list.itemDoubleClicked.connect(
@@ -589,8 +588,7 @@ class SpringToolWindow(QMainWindow):
             self.presets_file_path, current_character)
         if not saved_presets:
             return
-        if saved_presets is not None:
-            self.body_parts_list.addItems(saved_presets)
+        self.body_parts_list.addItems(saved_presets)
 
     def launch_all(self):
         '''
@@ -602,10 +600,9 @@ class SpringToolWindow(QMainWindow):
             return
         self.create_locators(self.rig_ctl_list)
         self.set_values_from_preset()
+        mode = 'translation'
         if self.rotation_mode_radio_button.isChecked():
             mode = 'rotation'
-        else:
-            mode = 'translation'
         self.setup_live_preview(self.rig_ctl_list, mode=mode)
         self.launch_bake()
 
@@ -631,10 +628,9 @@ class SpringToolWindow(QMainWindow):
         if not self.presets_file_path:
             return mc.warning(
                 'Path to presets not set/found.')
+        spring_mode = 'translation'
         if self.rotation_mode_radio_button.isChecked():
             spring_mode = 'rotation'
-        else:
-            spring_mode = 'translation'
         spring_value = self.spring_value_spinbox.value()
         rigidity_value = self.rigidity_value_spinbox.value()
         decay_value = self.decay_value_spinbox.value()
