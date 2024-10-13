@@ -159,7 +159,7 @@ class SpringToolPresetAdmin(QWidget):
             else:
                 parent_text = None
         else:
-            # Selecte item is None
+            # Selected item is None
             parent_text = None
             item_text = None
 
@@ -193,7 +193,7 @@ class SpringToolPresetAdmin(QWidget):
             return mc.warning('No preset selected')
 
         if presets.show_warning_message(
-            'Are you sure you want to remove this preset?'):
+                'Are you sure you want to remove this preset?'):
             presets.remove_preset(
                 self.presets_file_path,
                 character_name=parent_name or item_text,
@@ -237,7 +237,7 @@ class SpringToolPresetAdmin(QWidget):
 
     def edit_saved_preset_pressed(self):
         '''
-        show the save preset popup window.
+        Show the save preset popup window.
         Store existing main UI's values and pass it to the popup window
         '''
         if not self.presets_file_path:
