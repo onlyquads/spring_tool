@@ -55,7 +55,6 @@ window = spring_tool.SpringToolWindow(
     )
 window.show()
 
-
 - Note: 'prod_root_env_name' will be sent as string in
 'os.environ.get(prod_root_env_name)' in 'get_presets_file_path' function.
 
@@ -156,7 +155,7 @@ def disable_viewport(func):
 def add_bool_attr(node, lock=True):
 
     '''
-    Description: Creates custom string attributes and sets the value with
+    Description: Creates a custom string attributes and sets the value with
     given name, value.
     '''
     attribute_type = 'bool'
