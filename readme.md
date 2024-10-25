@@ -10,6 +10,9 @@ A preset system has been added, see the presets section
 
 [Watch a Quick Tutorial](https://garcia-nicolas.com/download/3147/?tmstv=1713513016&v=3148)
 
+## Compatibility:
+Tested on Maya 2022, 2023
+
 ## How to use:
 
 1. **Select Controllers:** Choose all the controllers in the chain (or just one).
@@ -18,7 +21,7 @@ A preset system has been added, see the presets section
 4. **Bake:** Click "Bake" to simulate and bake the entire chain.
 
 
-> **Note:** When previewing, ensure you read the timeline from the beginning. Tested on Maya 2022.
+> **Note:** When previewing, ensure you read the timeline from the beginning.
 
 ## Presets:
 You can add presets for different parts of a character/prop to be reused.
