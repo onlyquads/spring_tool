@@ -13,7 +13,7 @@ A preset system has been added, see the presets section
 ## How to use:
 
 1. **Select Controllers:** Choose all the controllers in the chain (or just one).
-2. **Create Locator:** Click "Create Locator" and align it to the end of the chain to set its scale.
+2. **Create Locator:** Click "Create Locator" and align it to the end of the chain to set its scale. Translate the locator only in one axis preferably in object space.
 3. **Preview:** Hit "Preview" and tweak the spring/rigidity settings. This previews only the first controller in the chain.
 4. **Bake:** Click "Bake" to simulate and bake the entire chain.
 
@@ -80,7 +80,7 @@ Once the Spring Tool is installed correctly, you should see a panel on the right
 To create a preset, follow these steps:
 
     1.	Select the controllers you want to work with.
-    2.	Create a locator and position it at the end of the chain.
+    2.	Create a locator and position it at the end of the chain. Translate the locator only on one axis in object space.
     3.	Click ‘Save Preset’—the locator’s coordinates and values will be automatically populated in the Save Preset popup window.
 
 ### Applying Presets
@@ -99,7 +99,6 @@ The Spring Tool includes an administration window for managing presets. You can 
 <div style="text-align: center;">
     <img src="https://garcia-nicolas.com/wp-content/uploads/2024/08/spring_tool_admin-e1723926107251.png" alt="spring tool admin ui screenshot" width="300"/>
 </div>
-
 
 
 To launch it run this python command:
