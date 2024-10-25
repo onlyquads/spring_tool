@@ -10,7 +10,7 @@ A preset system has been added, see the presets section
 
 [Watch a Quick Tutorial](https://garcia-nicolas.com/download/3147/?tmstv=1713513016&v=3148)
 
-## Compatibility:
+### Compatibility:
 Tested on Maya 2022, 2023
 
 ## How to use:
