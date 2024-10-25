@@ -91,7 +91,13 @@ To create a preset, follow these steps:
 When presets are available, you can apply them easily:
 
     1.	Select the necessary controllers in the viewport.
-    2.	Right-click on the desired preset and choose the ‘DO MAGIC’ option.
+    2.  Click on 'Create locator'
+    3.  Double click on any preset, this will place the locator to the position saved in the preset and set the spring values.
+
+or you can run the whole process automatically using the 'DO MAGIC' option:
+
+    1.	Select the necessary controllers in the viewport.
+    2.  Right-click on the desired preset and choose the ‘DO MAGIC’ option.
 
 This will automatically execute the entire process, applying the preset seamlessly.
 
