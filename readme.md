@@ -82,22 +82,22 @@ Once the Spring Tool is installed correctly, you should see a panel on the right
 
 To create a preset, follow these steps:
 
-    1.	Select the controllers you want to work with.
-    2.	Create a locator and position it at the end of the chain. Translate the locator only on one axis in object space.
-    3.	Click ‘Save Preset’—the locator’s coordinates and values will be automatically populated in the Save Preset popup window.
+    1. Select the controllers you want to work with.
+    2. Create a locator and position it at the end of the chain. Translate the locator only on one axis in object space.
+    3. Click ‘Save Preset’—the locator’s coordinates and values will be automatically populated in the Save Preset popup window.
 
 ### Applying Presets
 
 When presets are available, you can apply them easily:
 
-    1.	Select the necessary controllers in the viewport.
-    2.  Click on 'Create locator'
-    3.  Double click on any preset, this will place the locator to the position saved in the preset and set the spring values.
+    1. Select the necessary controllers in the viewport.
+    2. Click on 'Create locator'
+    3. Double click on any preset, this will place the locator to the position saved in the preset and set the spring values.
 
 or you can run the whole process automatically using the 'DO MAGIC' option:
 
-    1.	Select the necessary controllers in the viewport.
-    2.  Right-click on the desired preset and choose the ‘DO MAGIC’ option.
+    1. Select the necessary controllers in the viewport.
+    2. Right-click on the desired preset and choose the ‘DO MAGIC’ option.
 
 This will automatically execute the entire process, applying the preset seamlessly.
 
