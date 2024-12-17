@@ -1,8 +1,13 @@
 ## Description:
 The Spring Tool is an auto spring simulation script for Maya, inspired by Luismi Herrera's LMspring:   [LMspring on Gumroad](https://luismiherrera.gumroad.com/).
 
-Rewritten using Qt and python3 with better performances in bake process.
-A preset system has been added, see the presets section
+#### Key features:
+
+• Rewritten with Qt and Python 3: Improved performance, especially in the bake process.
+
+• Preset System: Allows saving and reusing controller configurations. See the Presets section for more details.
+
+• Automatic Opposite Chain Detection: The system now detects opposite chains and bakes them automatically.
 
 <div style="text-align: center;">
     <img src="https://garcia-nicolas.com/wp-content/uploads/2024/09/spring_tool.png" alt="spring tool ui screenshot" width="300"/>
