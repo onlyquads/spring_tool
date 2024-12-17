@@ -120,6 +120,22 @@ ROTATION_MODE_OPTVAR = 'sptlRotationMode'
 TRANSLATION_MODE_OPTVAR = 'sptlTranslationMode'
 BAKE_ON_LAYERS_OPTVAR = 'sptlBakeOnAnimLayers'
 MERGE_LAYERS_OPTVAR = 'sptlMergeAnimLayers'
+BAKE_OPPOSITE_OPTVAR = 'sptlBakeOppositeController'
+
+MIRROR = [
+    ('R_', 'L_'), ('L_', 'R_'),
+    ('_R', '_L'), ('_L', '_R'),
+    ('_R_', '_L_'), ('_L_', '_R_'),
+    ('r_', 'l_'), ('l_', 'r_'),
+    ('_r_', '_l_'), ('_l_', '_r_'),
+    ('_rt_', '_lf_'), ('_lf_', '_rt_'),
+    ('_rg_', '_lf_'), ('_lf_', '_rg_'),
+    ('_lf', '_rg'), ('_rg', '_lf'),
+    ('RF_', 'LF_'), ('LF_', 'RF_'),
+    ('left_', 'right_'), ('right_', 'left_'),
+    ('_left', '_right'), ('_right', '_left'),
+    ('_left_', '_right_'), ('_right_', '_left_'),
+]
 
 window = None
 
@@ -184,6 +200,33 @@ def list_nodes_with_sptl_attr():
     return base_objects
 
 
+def find_opposite_name(name):
+    namespace, _, control_name = name.rpartition(':')
+    for pattern, opposite_pattern in MIRROR:
+        if pattern in control_name:
+            new_control_name = control_name.replace(
+                pattern, opposite_pattern, 1
+                )
+            possible_opposite_name = (
+                f'{namespace}:{new_control_name}'
+                if namespace
+                else new_control_name
+                )
+            if mc.objExists(possible_opposite_name):
+                return possible_opposite_name
+    return None
+
+
+def get_opposite_ctl_list(list):
+    opposite_ctl_list = []
+    for ctl in list:
+        opposite_ctl = find_opposite_name(ctl)
+        if not opposite_ctl:
+            continue
+        opposite_ctl_list.append(opposite_ctl)
+    return opposite_ctl_list
+
+
 class SpringToolWindow(QMainWindow):
 
     def __init__(
@@ -220,6 +263,8 @@ class SpringToolWindow(QMainWindow):
         self.locator_position = [0, 0, 0]
         self.aim_loc = None
         self.layer_names_list = []
+        self.remember_ctl_selection_list = []
+        self.opposite_is_baked = False
 
         # Clear any existing nodes with sptl attribute from previous session
         if list_nodes_with_sptl_attr():
@@ -298,16 +343,25 @@ class SpringToolWindow(QMainWindow):
         self.decay_value_slider.setValue(12.0)
         self.decay_value_spinbox.valueChanged.connect(self.get_user_decay)
         self.decay_value_slider.valueChanged.connect(
-            self.slider_decay_value_changed)
+            self.slider_decay_value_changed
+            )
 
         bake_on_layer_option_layout = QHBoxLayout()
         self.bake_on_layer_checkbox = QCheckBox('Bake on layers')
         self.bake_on_layer_checkbox.stateChanged.connect(
-            self.save_preferences_states)
+            self.save_preferences_states
+            )
 
         self.merge_animation_layer_checkbox = QCheckBox('Merge layers')
         self.merge_animation_layer_checkbox.stateChanged.connect(
-            self.save_preferences_states)
+            self.save_preferences_states
+            )
+
+        bake_with_opposite_layout = QHBoxLayout()
+        self.bake_with_opposite_checkbox = QCheckBox('Bake opposite')
+        self.bake_with_opposite_checkbox.stateChanged.connect(
+            self.save_preferences_states
+            )
 
         self.bake_button = QPushButton('3. Bake!')
         self.bake_button.clicked.connect(self.launch_bake)
@@ -331,6 +385,8 @@ class SpringToolWindow(QMainWindow):
         bake_on_layer_option_layout.addWidget(
             self.merge_animation_layer_checkbox)
 
+        bake_with_opposite_layout.addWidget(self.bake_with_opposite_checkbox)
+
         self.main_layout.addLayout(self.radio_buttons_layout)
         self.main_layout.addWidget(self.locators_button)
         self.main_layout.addWidget(self.previz_button)
@@ -338,6 +394,7 @@ class SpringToolWindow(QMainWindow):
         self.main_layout.addLayout(rigidity_layout)
         self.main_layout.addLayout(decay_layout)
         self.main_layout.addLayout(bake_on_layer_option_layout)
+        self.main_layout.addLayout(bake_with_opposite_layout)
         self.main_layout.addStretch()
         self.main_layout.addWidget(self.bake_button)
         self.main_layout.addWidget(self.remove_setup_button)
@@ -388,12 +445,14 @@ class SpringToolWindow(QMainWindow):
         translation_mode_state = self.translation_mode_radio_button.isChecked()
         bake_on_layer_state = self.bake_on_layer_checkbox.isChecked()
         merge_layers_state = self.merge_animation_layer_checkbox.isChecked()
+        bake_opposite_ctl_state = self.bake_with_opposite_checkbox.isChecked()
 
         # Save the states as integers
         mc.optionVar(iv=(ROTATION_MODE_OPTVAR, int(rotation_mode_state)))
         mc.optionVar(iv=(TRANSLATION_MODE_OPTVAR, int(translation_mode_state)))
         mc.optionVar(iv=(BAKE_ON_LAYERS_OPTVAR, int(bake_on_layer_state)))
         mc.optionVar(iv=(MERGE_LAYERS_OPTVAR, int(merge_layers_state)))
+        mc.optionVar(iv=(BAKE_OPPOSITE_OPTVAR, int(bake_opposite_ctl_state)))
 
         self.merge_animation_layer_checkbox.setEnabled(bake_on_layer_state)
 
@@ -405,6 +464,7 @@ class SpringToolWindow(QMainWindow):
         self.translation_mode_radio_button.blockSignals(True)
         self.bake_on_layer_checkbox.blockSignals(True)
         self.merge_animation_layer_checkbox.blockSignals(True)
+        self.bake_with_opposite_checkbox.blockSignals(True)
 
         if mc.optionVar(exists=ROTATION_MODE_OPTVAR):
             rotation_mode_state = mc.optionVar(q=ROTATION_MODE_OPTVAR)
@@ -424,22 +484,34 @@ class SpringToolWindow(QMainWindow):
 
         if mc.optionVar(exists=BAKE_ON_LAYERS_OPTVAR):
             bake_on_layer_state = mc.optionVar(q=BAKE_ON_LAYERS_OPTVAR)
-            self.bake_on_layer_checkbox.setChecked(bool(bake_on_layer_state))
+            self.bake_on_layer_checkbox.setChecked(
+                bool(bake_on_layer_state)
+                )
         else:
             self.bake_on_layer_checkbox.setChecked(False)
 
         if mc.optionVar(exists=MERGE_LAYERS_OPTVAR):
             merge_layers_state = mc.optionVar(q=MERGE_LAYERS_OPTVAR)
             self.merge_animation_layer_checkbox.setChecked(
-                bool(merge_layers_state))
+                bool(merge_layers_state)
+                )
         else:
             self.merge_animation_layer_checkbox.setChecked(False)
+
+        if mc.optionVar(exists=BAKE_OPPOSITE_OPTVAR):
+            bake_opposite_ctl_state = mc.optionVar(q=BAKE_OPPOSITE_OPTVAR)
+            self.bake_with_opposite_checkbox.setChecked(
+                bool(bake_opposite_ctl_state)
+            )
+        else:
+            self.bake_with_opposite_checkbox.setChecked(False)
 
         # Unblock signals after setting the states
         self.rotation_mode_radio_button.blockSignals(False)
         self.translation_mode_radio_button.blockSignals(False)
         self.bake_on_layer_checkbox.blockSignals(False)
         self.merge_animation_layer_checkbox.blockSignals(False)
+        self.bake_with_opposite_checkbox.blockSignals(False)
 
     def showEvent(self, event):
         # Set window width and height to minimum and lock resizability
@@ -580,7 +652,9 @@ class SpringToolWindow(QMainWindow):
             self.set_values_from_preset)
 
     def on_character_changed(self):
-        '''refresh the available body parts in UI list'''
+        '''
+        refresh the available body parts in UI list
+        '''
         self.body_parts_list.clear()
         current_character = self.character_combo.currentText()
         saved_presets = presets.get_available_body_parts(
@@ -588,6 +662,29 @@ class SpringToolWindow(QMainWindow):
         if not saved_presets:
             return
         self.body_parts_list.addItems(saved_presets)
+
+    def launch_for_opposite(self):
+        '''
+        Try to get opposite controllers and launch process again if found
+        '''
+
+        # Stop the function and reset the opposite_is_baked flag to False
+        if self.opposite_is_baked:
+            self.opposite_is_baked = False
+            return
+        self.rig_ctl_list = get_opposite_ctl_list(
+            self.remember_ctl_selection_list
+            )
+        if not self.rig_ctl_list:
+            return mc.warning('No opposite found')
+        self.create_locators(self.rig_ctl_list)
+        self.move_to_pref_position(list(self.loc_position[0]))
+        mode = 'translation'
+        if self.rotation_mode_radio_button.isChecked():
+            mode = 'rotation'
+        self.setup_live_preview(self.rig_ctl_list, mode=mode)
+        self.launch_bake()
+        self.opposite_is_baked = True
 
     def launch_all(self):
         '''
@@ -616,7 +713,6 @@ class SpringToolWindow(QMainWindow):
             pos = mc.getAttr(f'{self.aim_loc[0]}.translate')
             position_fixed = [
                 tuple(round(coord, 2) for coord in point) for point in pos]
-            print(f'FOUND POSITION {position_fixed}')
             return position_fixed
 
     def show_save_preset_popup(self):
@@ -758,6 +854,9 @@ class SpringToolWindow(QMainWindow):
         mm.eval('evaluationManager -mode "off";')
 
     def get_node_shortname(self, node):
+        '''
+        Return node name without any namespace
+        '''
         return node.split(':')[-1]
 
     @disable_viewport
@@ -769,7 +868,7 @@ class SpringToolWindow(QMainWindow):
             ):
 
         mc.undoInfo(ock=True)
-
+        self.loc_position = self.get_aim_loc_position()
         if mc.objExists(TOOLNAME):
             return mc.warning('Live preview already set')
 
@@ -972,13 +1071,10 @@ class SpringToolWindow(QMainWindow):
             mc.optionVar(intValue=('animLayerMergeDeleteLayers', delete_baked))
             if not mc.optionVar(exists='animLayerMergeByTime'):
                 mc.optionVar(floatValue=('animLayerMergeByTime', 1.0))
-
             # Add the target layer at the start of the list
             layer_name_list.insert(0, merged_layer_name)
-
             # Merge the layers
             mm.eval('animLayerMerge {"%s"}' % '","'.join(layer_name_list))
-
             # Rename the merged layer
             mc.rename('Merged_Layer', merged_layer_name)
 
@@ -988,52 +1084,69 @@ class SpringToolWindow(QMainWindow):
 
     @disable_viewport
     def launch_bake(self):
+        try:
 
-        rotation_mode = self.rotation_mode_radio_button.isChecked()
+            rotation_mode = self.rotation_mode_radio_button.isChecked()
 
-        mc.undoInfo(ock=True)
+            mc.undoInfo(ock=True)
 
-        if not mc.objExists(TOOLNAME):
-            mc.warning('No Live Preview setup found, use Live Preview first')
-            return
-        print('--- BAKING PLEASE WAIT ---')
-        spring_weight = self.spring_value_spinbox.value()
-        decay = self.get_user_decay()
+            if not mc.objExists(TOOLNAME):
+                mc.warning(
+                    'No Live Preview setup found, use Live Preview first'
+                    )
+                return
+            print('--- BAKING PLEASE WAIT ---')
+            spring_weight = self.spring_value_spinbox.value()
+            decay = self.get_user_decay()
 
-        vp_eval = self.get_vp_evaluation_mode()
-        self.switch_back_vp_eval('off')
-        selected_rig_ctl = self.rig_ctl_list
-        for i in range(len(selected_rig_ctl)):
-            # BAKING FIRST CTL OF THE CHAIN
-            if i == 0:
+            vp_eval = self.get_vp_evaluation_mode()
+            self.switch_back_vp_eval('off')
+            selected_rig_ctl = self.rig_ctl_list
+            self.remember_ctl_selection_list = self.rig_ctl_list
+            for i in range(len(selected_rig_ctl)):
+                # BAKING FIRST CTL OF THE CHAIN
+                if i == 0:
+                    self.bake_ctl(current_ctl=selected_rig_ctl[i])
+                    continue
+
+                # BAKING CHILDREN OF THE CHAIN
+                self.create_locators([selected_rig_ctl[i]])
+                self.align_locator()
+                spring_weight = self.get_overlap_weight_math(
+                    spring_weight,
+                    decay
+                    )
+
+                mode = 'rotation' if rotation_mode else 'translation'
+                self.setup_live_preview(
+                    [selected_rig_ctl[i]],
+                    mode=mode,
+                    spring_weight=(1 - spring_weight),
+                )
+
                 self.bake_ctl(current_ctl=selected_rig_ctl[i])
-                continue
 
-            # BAKING CHILDREN OF THE CHAIN
-            self.create_locators([selected_rig_ctl[i]])
-            self.align_locator()
-            spring_weight = self.get_overlap_weight_math(spring_weight, decay)
+            if self.merge_animation_layer_checkbox.isChecked():
+                controller_name = self.get_node_shortname(selected_rig_ctl[0])
+                merged_layer_name = (
+                    f'{LAYER_PREFIX}_{controller_name}_merged'
+                    )
+                self.merge_animation_layer(
+                    self.layer_names_list, merged_layer_name)
 
-            mode = 'rotation' if rotation_mode else 'translation'
-            self.setup_live_preview(
-                [selected_rig_ctl[i]],
-                mode=mode,
-                spring_weight=(1 - spring_weight),
-            )
+            # Clear the anim layer list
+            self.layer_names_list = []
 
-            self.bake_ctl(current_ctl=selected_rig_ctl[i])
+            # If opposite checkbox is checked
+            if self.bake_with_opposite_checkbox.isChecked():
+                mc.evalDeferred(self.launch_for_opposite, lowestPriority=True)
 
-        if self.merge_animation_layer_checkbox.isChecked():
-            controller_name = self.get_node_shortname(selected_rig_ctl[0])
-            merged_layer_name = (f'{LAYER_PREFIX}_{controller_name}_merged')
-            self.merge_animation_layer(
-                self.layer_names_list, merged_layer_name)
+            mc.warning('Spring COMPLETED !')
+            self.switch_back_vp_eval(vp_eval)
+            mc.undoInfo(cck=True)
 
-        # Clear the anim layer list
-        self.layer_names_list = []
-        mc.warning('Spring COMPLETED !')
-        self.switch_back_vp_eval(vp_eval)
-        mc.undoInfo(cck=True)
+        except Exception as e:
+            print(f"Exception caught: {e}")
 
 
 if __name__ == '__main__':

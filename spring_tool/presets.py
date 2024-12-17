@@ -1,9 +1,12 @@
 import json
 import os
 import re
+from pprint import pprint
+import maya.cmds as mc
 from PySide2.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QInputDialog,
-    QDoubleSpinBox, QLabel, QLineEdit, QMessageBox, QRadioButton)
+    QDoubleSpinBox, QLabel, QLineEdit, QMessageBox, QRadioButton, QCheckBox,
+    QFrame)
 from PySide2 import QtCore
 
 
@@ -42,10 +45,10 @@ def show_warning_message(message):
 
 
 def create_preset_file(path, filename):
-    '''
+    """
     If no preset file found but path is set, ask the user to create the file
     automatically
-    '''
+    """
     message = "No preset file found. Would you like to create one?"
     if not show_warning_message(message):
         return None
@@ -132,7 +135,6 @@ def get_available_body_parts(path, character_name):
 
 def get_all_data(path, character_name, body_part):
     presets = load_presets(path)
-
     # Validate the presence of necessary data
     if not presets:
         return None, None, None, None, None
@@ -165,7 +167,6 @@ def remove_preset(path, character_name, body_part=None):
     - character_name: The name of the character to modify.
     - body_part: The specific body part to remove.
     If None, the entire character will be removed.
-
     Returns:
     - True if the removal was successful, False otherwise.
     """
@@ -213,12 +214,12 @@ def rename_key(json_data, old_key, new_key, parent_text=None):
 
 
 def name_input_dialog(existing_names, default_name='Character Name'):
-    '''
+    """
     Show a popup window that asks for a name and checks against existing names.
     :param existing_names: A list of names that are already taken.
     :param default_name: Default name to display in the input dialog.
     :return: The entered name if valid, otherwise None.
-    '''
+    """
 
     # Function to handle text changed event to auto correct ' ' to '_'
     def handle_text_changed():
@@ -302,7 +303,7 @@ def save_preset(
         spring_rigidity=None,
         decay=None,
         position=None,
-        overwrite=False
+        overwrite=False  # Set to True for editing
         ):
     presets = load_presets(path)
 
@@ -357,7 +358,7 @@ class SavePresetPopup(QWidget):
         super().__init__(parent=parent)
 
         self.setWindowTitle("Save Preset")
-        self.setWindowModality(QtCore.Qt.ApplicationModal)
+        # self.setWindowModality(QtCore.Qt.ApplicationModal)
         self.main_window = main_window
         self.presets_file_path = presets_path
         self.presets = load_presets(presets_path)
@@ -380,8 +381,11 @@ class SavePresetPopup(QWidget):
             self.character_name_combobox.setEnabled(False)
             self.body_part_line_edit.setEnabled(False)
 
+        self.controllers_layout_panel_is_hidden = True
+
     def load_preset_popup_ui(self):
-        layout = QVBoxLayout()
+        self.main_preset_layout = QHBoxLayout()
+        preset_layout = QVBoxLayout()
 
         # Spring mode
         spring_mode_layout = QHBoxLayout()
@@ -391,7 +395,7 @@ class SavePresetPopup(QWidget):
         spring_mode_layout.addWidget(spring_mode_label)
         spring_mode_layout.addWidget(self.rotation_mode_radio)
         spring_mode_layout.addWidget(self.translation_mode_radio)
-        layout.addLayout(spring_mode_layout)
+        preset_layout.addLayout(spring_mode_layout)
 
         # Character Name
         char_name_layout = QHBoxLayout()
@@ -399,7 +403,7 @@ class SavePresetPopup(QWidget):
         self.character_name_combobox = QComboBox()
         char_name_layout.addWidget(character_label)
         char_name_layout.addWidget(self.character_name_combobox)
-        layout.addLayout(char_name_layout)
+        preset_layout.addLayout(char_name_layout)
         self.populate_characters_combobox()
         self.character_name_combobox.currentIndexChanged.connect(
             self.character_combobox_changed
@@ -411,7 +415,18 @@ class SavePresetPopup(QWidget):
         self.body_part_line_edit = QLineEdit()
         body_part_layout.addWidget(body_part_label)
         body_part_layout.addWidget(self.body_part_line_edit)
-        layout.addLayout(body_part_layout)
+        preset_layout.addLayout(body_part_layout)
+
+        # Controller sets
+        controller_set_layout = QHBoxLayout()
+        controller_set_label = QLabel('Controller sets')
+        controller_sets_checkbox = QCheckBox()
+        controller_sets_checkbox.setChecked(False)
+        controller_sets_checkbox.stateChanged.connect(
+            self.toggle_controllers_panel)
+        controller_set_layout.addWidget(controller_set_label)
+        controller_set_layout.addWidget(controller_sets_checkbox)
+        # preset_layout.addLayout(controller_set_layout)
 
         # Spring
         spring_layout = QHBoxLayout()
@@ -422,7 +437,7 @@ class SavePresetPopup(QWidget):
         self.spring_spinbox.setValue(self.spring_value)
         spring_layout.addWidget(spring_label)
         spring_layout.addWidget(self.spring_spinbox)
-        layout.addLayout(spring_layout)
+        preset_layout.addLayout(spring_layout)
 
         # Rigidity
         rigidity_layout = QHBoxLayout()
@@ -433,7 +448,7 @@ class SavePresetPopup(QWidget):
         self.rigidity_spinbox.setValue(self.rigidity_value)
         rigidity_layout.addWidget(rigidity_label)
         rigidity_layout.addWidget(self.rigidity_spinbox)
-        layout.addLayout(rigidity_layout)
+        preset_layout.addLayout(rigidity_layout)
 
         # Decay
         decay_layout = QHBoxLayout()
@@ -444,7 +459,7 @@ class SavePresetPopup(QWidget):
         self.decay_spinbox.setValue(self.decay_value)
         decay_layout.addWidget(decay_label)
         decay_layout.addWidget(self.decay_spinbox)
-        layout.addLayout(decay_layout)
+        preset_layout.addLayout(decay_layout)
 
         # Position
         position_layout = QHBoxLayout()
@@ -463,7 +478,7 @@ class SavePresetPopup(QWidget):
         position_layout.addWidget(self.position_tx_spinbox)
         position_layout.addWidget(self.position_ty_spinbox)
         position_layout.addWidget(self.position_tz_spinbox)
-        layout.addLayout(position_layout)
+        preset_layout.addLayout(position_layout)
 
         # Buttons
         button_layout = QHBoxLayout()
@@ -473,14 +488,165 @@ class SavePresetPopup(QWidget):
         cancel_button.clicked.connect(self.close)
         button_layout.addWidget(confirm_button)
         button_layout.addWidget(cancel_button)
-        layout.addLayout(button_layout)
-        self.setLayout(layout)
+        preset_layout.addLayout(button_layout)
+        self.main_preset_layout.addLayout(preset_layout)
+        self.setLayout(self.main_preset_layout)
+
+    def controllers_sets_panel(self):
+        '''
+        Panel that holds all the sets layouts
+        '''
+
+        # Create a vertical separator (QFrame)
+        self.separator = QFrame()
+        self.separator.setFrameShape(QFrame.VLine)  # Set to vertical line
+        self.separator.setFrameShadow(QFrame.Sunken)  # Set shadow for depth
+        self.separator.setLineWidth(2)  # Set the line width
+
+        self.controllers_sets_panel_layout = QVBoxLayout()
+        self.list_of_selection_sets_layout = QVBoxLayout()
+        add_remove_ctl_set_layout = QHBoxLayout()
+        text = (
+            'Create a set for each chain. Then select all the controllers '
+            'of each chain and click on "sel" to add them to the set'
+            )
+        controllers_sets_hint = QLabel(text)
+        controllers_sets_hint.setWordWrap(True)
+        self.add_ctl_set_button = QPushButton('Add set')
+        self.add_ctl_set_button.clicked.connect(self.add_controller_set)
+        self.remove_ctl_set_button = QPushButton('Remove set')
+        self.remove_ctl_set_button.clicked.connect(
+            self.delete_last_controller_set_layout)
+        self.print_list = QPushButton('Print output')
+        self.print_list.clicked.connect(self.get_selection_sets)
+
+        self.controllers_sets_panel_layout.addWidget(controllers_sets_hint)
+        add_remove_ctl_set_layout.addWidget(self.add_ctl_set_button)
+        add_remove_ctl_set_layout.addWidget(self.remove_ctl_set_button)
+        add_remove_ctl_set_layout.addWidget(self.print_list)
+
+        self.controllers_sets_panel_layout.addLayout(add_remove_ctl_set_layout)
+        self.controllers_sets_panel_layout.addLayout(
+            self.list_of_selection_sets_layout)
+        self.controllers_sets_panel_layout.addStretch()
+        self.main_preset_layout.addWidget(self.separator)
+        self.main_preset_layout.addLayout(self.controllers_sets_panel_layout)
+        self.controllers_layout_panel_is_hidden = False
+
+    def add_controller_set(self):
+        '''
+        Add a layout with set button and qline edit to hold the controllers
+        '''
+        self.controller_set_layout = QHBoxLayout()
+        self.set_selected_ctl_button = QPushButton('Sel')
+        self.set_selected_ctl_button.clicked.connect(
+            self.add_current_selection)
+        self.selected_ctl_line_edit = QLineEdit()
+        self.controller_set_layout.addWidget(self.set_selected_ctl_button)
+        self.controller_set_layout.addWidget(self.selected_ctl_line_edit)
+        self.list_of_selection_sets_layout.addLayout(
+            self.controller_set_layout)
+
+    def remove_controllers_sets_panel(self):
+        '''
+        remove the whole controller sets panel from UI
+        '''
+        self.separator.deleteLater()
+        while self.controllers_sets_panel_layout.count():
+            item = self.controllers_sets_panel_layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+            sub_layout = item.layout()  # Check if the item is a sub-layout
+            if sub_layout:
+                self.delete_layout(sub_layout)
+
+        self.controllers_sets_panel_layout.deleteLater()
+        self.controllers_sets_panel_layout = None
+        self.controllers_layout_panel_is_hidden = True
+
+    def delete_layout(self, layout):
+        '''
+        Recursively delete all widgets and sub-layouts in the given layout.
+        '''
+        # Remove all widgets and sub-layouts
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+
+            sub_layout = item.layout()
+            if sub_layout:
+                self.delete_layout(sub_layout)
+
+        # Delete the layout itself
+        layout.deleteLater()
+
+    def toggle_controllers_panel(self):
+        if self.controllers_layout_panel_is_hidden:
+            self.controllers_sets_panel()
+            return
+        self.remove_controllers_sets_panel()
+
+    def add_current_selection(self):
+        selection = mc.ls(sl=True)
+        self.selected_ctl_line_edit.setText((", ".join(selection)))
+
+    def list_selection_set_layouts(self):
+        layout_list = []
+        layout = self.list_of_selection_sets_layout
+        for i in range(layout.count()):
+            item = layout.itemAt(i)
+
+            # Check if item is a layout
+            layout_widget = item.layout()
+            if layout_widget and isinstance(layout_widget, QHBoxLayout):
+                layout_list.append(layout_widget)
+
+        print('List of layout found are:', layout_list)
+        return layout_list
+
+    def delete_last_controller_set_layout(self):
+        layout_list = self.list_selection_set_layouts()
+        if not layout_list:
+            return
+        latest_layout = layout_list[-1]
+        self.list_of_selection_sets_layout.removeItem(latest_layout)
+        self.delete_layout(latest_layout)
+
+    def list_all_qlineedits(layout):
+        qlineedits = []  # List to store all QLineEdit widgets
+
+        # Iterate through all items in the layout
+        for i in range(layout.count()):
+            item = layout.itemAt(i)  # Get the layout item at index i
+            widget = item.widget()   # Get the widget from the layout item
+
+            # Check if the widget is a QLineEdit
+            if isinstance(widget, QLineEdit):
+                qlineedits.append(widget)  # Add the QLineEdit to the list
+
+        return qlineedits
+
+    def get_selection_sets(self):
+        qlineedits_list = self.list_all_qlineedits(
+            self.list_of_selection_sets_layout
+            )
+        controllers_lists = []
+        for i, qlineedit in enumerate(qlineedits_list):
+            line_edit_text = qlineedit.text()
+            chain_list = line_edit_text.split(', ')
+            controllers_lists.append(chain_list)
+
+        pprint(controllers_lists)
+        return controllers_lists
 
     def populate_characters_combobox(self):
-        '''
+        """
         Populate the characters available in the pref file. Or ask for a
         new name
-        '''
+        """
         self.character_name_combobox.clear()
         saved_char_list = get_available_characters(self.presets_file_path)
         if saved_char_list:
