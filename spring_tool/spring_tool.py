@@ -155,7 +155,7 @@ def disable_viewport(func):
     '''
     @wraps(func)
     def wrap(*args, **kwargs):
-        mm.eval("paneLayout -e -manage false $gMainPane")
+        mm.eval('paneLayout -e -manage false $gMainPane')
         # Decorator will try/except running the function.
         # But it will always turn on the viewport at the end.
         # If the function failed, it will prevent leaving maya viewport off.
@@ -164,12 +164,11 @@ def disable_viewport(func):
         except Exception:
             mc.warning(Exception)
         finally:
-            mm.eval("paneLayout -e -manage true $gMainPane")
+            mm.eval('paneLayout -e -manage true $gMainPane')
     return wrap
 
 
 def add_bool_attr(node, lock=True):
-
     '''
     Description: Creates a custom string attributes and sets the value with
     given name, value.
@@ -191,10 +190,10 @@ def add_bool_attr(node, lock=True):
 
 
 def list_nodes_with_sptl_attr():
-    """
+    '''
     Returns a list of all nodes in the scene that have
     the sptl custom attribute and where the attribute is set to True.
-    """
+    '''
     objects_with_attr = mc.ls(f'*.{SPTL_NODE_ATTR}', sn=True)
     base_objects = [obj.split('.')[0] for obj in objects_with_attr]
     return base_objects
@@ -263,7 +262,7 @@ class SpringToolWindow(QMainWindow):
         self.locator_position = [0, 0, 0]
         self.aim_loc = None
         self.layer_names_list = []
-        self.remember_ctl_selection_list = []
+        self.rig_ctl_list = []
         self.opposite_is_baked = False
 
         # Clear any existing nodes with sptl attribute from previous session
@@ -673,7 +672,7 @@ class SpringToolWindow(QMainWindow):
             self.opposite_is_baked = False
             return
         self.rig_ctl_list = get_opposite_ctl_list(
-            self.remember_ctl_selection_list
+            self.rig_ctl_list
             )
         if not self.rig_ctl_list:
             return mc.warning('No opposite found')
@@ -777,16 +776,16 @@ class SpringToolWindow(QMainWindow):
 
     def create_locators(self, selected_rig_ctl_list):
         mc.undoInfo(ock=True)
-        self.rig_ctl_list = []
-        self.rig_ctl_list = sorted(selected_rig_ctl_list)
+        rig_ctl_list = []
+        rig_ctl_list = sorted(selected_rig_ctl_list)
         aim_loc_grp = mc.group(name=AIM_GRP_NAME, empty=True)
         add_bool_attr(aim_loc_grp)
-        mc.parent(aim_loc_grp, self.rig_ctl_list[0], relative=True)
+        mc.parent(aim_loc_grp, rig_ctl_list[0], relative=True)
         sel_matrix = mc.xform(
-            self.rig_ctl_list[0], q=True, ws=True, matrix=True)
+            rig_ctl_list[0], q=True, ws=True, matrix=True)
         mc.xform(aim_loc_grp, ws=True, matrix=sel_matrix)
         parent_constraint = mc.parentConstraint(
-            self.rig_ctl_list[0], aim_loc_grp, mo=True)
+            rig_ctl_list[0], aim_loc_grp, mo=True)
         add_bool_attr(parent_constraint[0])
 
         self.aim_loc = mc.spaceLocator(name='SPTL_Aim_loc')
@@ -1065,6 +1064,7 @@ class SpringToolWindow(QMainWindow):
 
     def merge_animation_layer(
             self, layer_name_list, merged_layer_name, delete_baked=True):
+
         if not layer_name_list:
             return
         try:
@@ -1085,9 +1085,7 @@ class SpringToolWindow(QMainWindow):
     @disable_viewport
     def launch_bake(self):
         try:
-
             rotation_mode = self.rotation_mode_radio_button.isChecked()
-
             mc.undoInfo(ock=True)
 
             if not mc.objExists(TOOLNAME):
@@ -1098,11 +1096,9 @@ class SpringToolWindow(QMainWindow):
             print('--- BAKING PLEASE WAIT ---')
             spring_weight = self.spring_value_spinbox.value()
             decay = self.get_user_decay()
-
             vp_eval = self.get_vp_evaluation_mode()
             self.switch_back_vp_eval('off')
             selected_rig_ctl = self.rig_ctl_list
-            self.remember_ctl_selection_list = self.rig_ctl_list
             for i in range(len(selected_rig_ctl)):
                 # BAKING FIRST CTL OF THE CHAIN
                 if i == 0:
@@ -1134,11 +1130,11 @@ class SpringToolWindow(QMainWindow):
                 self.merge_animation_layer(
                     self.layer_names_list, merged_layer_name)
 
-            # Clear the anim layer list
             self.layer_names_list = []
 
             # If opposite checkbox is checked
             if self.bake_with_opposite_checkbox.isChecked():
+                # wait for first side to finish
                 mc.evalDeferred(self.launch_for_opposite, lowestPriority=True)
 
             mc.warning('Spring COMPLETED !')
@@ -1146,7 +1142,7 @@ class SpringToolWindow(QMainWindow):
             mc.undoInfo(cck=True)
 
         except Exception as e:
-            print(f"Exception caught: {e}")
+            print(f'Exception caught: {e}')
 
 
 if __name__ == '__main__':

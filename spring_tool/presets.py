@@ -675,6 +675,15 @@ class SavePresetPopup(QWidget):
         character_name = self.character_name_combobox.currentText()
         body_part = self.body_part_line_edit.text()
 
+        if character_name == EMPTY_LINE_TEXT:
+            QMessageBox.warning(
+                None,
+                "Invalid Name",
+                "No character name given. "
+                "Please select or create a new character name."
+                )
+            return
+
         saved_names = get_available_body_parts(
             self.presets_file_path, character_name)
 
@@ -684,7 +693,8 @@ class SavePresetPopup(QWidget):
                     None,
                     "Name Taken",
                     "This name is already taken. "
-                    "Please choose a different name.")
+                    "Please choose a different name."
+                    )
                 return
 
         if self.rotation_mode_radio.isChecked():
