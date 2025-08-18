@@ -3,11 +3,13 @@ import os
 import re
 from pprint import pprint
 import maya.cmds as mc
-from PySide2.QtWidgets import (
-    QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QInputDialog,
-    QDoubleSpinBox, QLabel, QLineEdit, QMessageBox, QRadioButton, QCheckBox,
-    QFrame)
-from PySide2 import QtCore
+
+if mc.about(apiVersion=True) <= 20250000:
+    from PySide2 import QtCore
+    from PySide2 import QtWidgets
+else:
+    from PySide6 import QtCore
+    from PySide6 import QtWidgets
 
 
 EMPTY_LINE_TEXT = '----------'
@@ -15,30 +17,31 @@ ADD_NEW_CHARACTER_TEXT = ' - Add new character -'
 
 
 def show_error_message(message):
-    error_dialog = QMessageBox()
+    error_dialog = QtWidgets.QMessageBox()
     error_dialog.setText(message)
-    error_dialog.setIcon(QMessageBox.Critical)
+    error_dialog.setIcon(QtWidgets.QMessageBox.Critical)
     error_dialog.setWindowTitle("Warning")
     error_dialog.exec_()
 
 
 def show_warning_message(message):
-    warning_dialog = QMessageBox()
-    warning_dialog.setIcon(QMessageBox.Warning)
+    warning_dialog = QtWidgets.QMessageBox()
+    warning_dialog.setIcon(QtWidgets.QMessageBox.Warning)
     warning_dialog.setWindowTitle("Warning")
     warning_dialog.setText(message)
 
     # Add OK and Cancel buttons
-    warning_dialog.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+    warning_dialog.setStandardButtons(
+        QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
 
     # Set the default button to Cancel
-    warning_dialog.setDefaultButton(QMessageBox.Cancel)
+    warning_dialog.setDefaultButton(QtWidgets.QMessageBox.Cancel)
 
     # Execute the dialog and get the response
     response = warning_dialog.exec_()
 
     # Return True if OK is clicked, False if Cancel is clicked
-    if response == QMessageBox.Ok:
+    if response == QtWidgets.QMessageBox.Ok:
         return True
     else:
         return False
@@ -229,7 +232,7 @@ def name_input_dialog(existing_names, default_name='Character Name'):
         input_dialog.setTextValue(text_value)
 
     # Open the input dialog
-    input_dialog = QInputDialog()
+    input_dialog = QtWidgets.QInputDialog()
     input_dialog.setWindowTitle('Preset Name')
     input_dialog.setLabelText('Enter Name')
     input_dialog.setTextValue(default_name)
@@ -245,7 +248,7 @@ def name_input_dialog(existing_names, default_name='Character Name'):
     if ok and text:
         # Validate input: no spaces or special characters allowed
         if not re.match("^[a-zA-Z0-9_]+$", text):
-            QMessageBox.warning(
+            QtWidgets.QMessageBox.warning(
                 None,
                 "Invalid Input",
                 "Name must contain only letters, numbers, or underscores.")
@@ -256,7 +259,7 @@ def name_input_dialog(existing_names, default_name='Character Name'):
 
         # Check if the name is already taken
         if text.lower() in [name.lower() for name in existing_names]:
-            QMessageBox.warning(
+            QtWidgets.QMessageBox.warning(
                 None,
                 "Name Taken",
                 "This name is already taken. Please choose a different name.")
@@ -336,7 +339,7 @@ def save_preset(
         json.dump(presets, f, indent=4)
 
 
-class SavePresetPopup(QWidget):
+class SavePresetPopup(QtWidgets.QWidget):
 
     refresh_signal = QtCore.Signal()
 
@@ -384,23 +387,23 @@ class SavePresetPopup(QWidget):
         self.controllers_layout_panel_is_hidden = True
 
     def load_preset_popup_ui(self):
-        self.main_preset_layout = QHBoxLayout()
-        preset_layout = QVBoxLayout()
+        self.main_preset_layout = QtWidgets.QHBoxLayout()
+        preset_layout = QtWidgets.QVBoxLayout()
 
         # Spring mode
-        spring_mode_layout = QHBoxLayout()
-        spring_mode_label = QLabel("Spring Mode")
-        self.rotation_mode_radio = QRadioButton('Rotation')
-        self.translation_mode_radio = QRadioButton('Translation')
+        spring_mode_layout = QtWidgets.QHBoxLayout()
+        spring_mode_label = QtWidgets.QLabel("Spring Mode")
+        self.rotation_mode_radio = QtWidgets.QRadioButton('Rotation')
+        self.translation_mode_radio = QtWidgets.QRadioButton('Translation')
         spring_mode_layout.addWidget(spring_mode_label)
         spring_mode_layout.addWidget(self.rotation_mode_radio)
         spring_mode_layout.addWidget(self.translation_mode_radio)
         preset_layout.addLayout(spring_mode_layout)
 
         # Character Name
-        char_name_layout = QHBoxLayout()
-        character_label = QLabel("Character Name:")
-        self.character_name_combobox = QComboBox()
+        char_name_layout = QtWidgets.QHBoxLayout()
+        character_label = QtWidgets.QLabel("Character Name:")
+        self.character_name_combobox = QtWidgets.QComboBox()
         char_name_layout.addWidget(character_label)
         char_name_layout.addWidget(self.character_name_combobox)
         preset_layout.addLayout(char_name_layout)
@@ -410,17 +413,17 @@ class SavePresetPopup(QWidget):
         )
 
         # Body Part
-        body_part_layout = QHBoxLayout()
-        body_part_label = QLabel("Body part Name:")
-        self.body_part_line_edit = QLineEdit()
+        body_part_layout = QtWidgets.QHBoxLayout()
+        body_part_label = QtWidgets.QLabel("Body part Name:")
+        self.body_part_line_edit = QtWidgets.QLineEdit()
         body_part_layout.addWidget(body_part_label)
         body_part_layout.addWidget(self.body_part_line_edit)
         preset_layout.addLayout(body_part_layout)
 
         # Controller sets
-        controller_set_layout = QHBoxLayout()
-        controller_set_label = QLabel('Controller sets')
-        controller_sets_checkbox = QCheckBox()
+        controller_set_layout = QtWidgets.QHBoxLayout()
+        controller_set_label = QtWidgets.QLabel('Controller sets')
+        controller_sets_checkbox = QtWidgets.QCheckBox()
         controller_sets_checkbox.setChecked(False)
         controller_sets_checkbox.stateChanged.connect(
             self.toggle_controllers_panel)
@@ -429,9 +432,9 @@ class SavePresetPopup(QWidget):
         # preset_layout.addLayout(controller_set_layout)
 
         # Spring
-        spring_layout = QHBoxLayout()
-        spring_label = QLabel("Spring:")
-        self.spring_spinbox = QDoubleSpinBox()
+        spring_layout = QtWidgets.QHBoxLayout()
+        spring_label = QtWidgets.QLabel("Spring:")
+        self.spring_spinbox = QtWidgets.QDoubleSpinBox()
         self.spring_spinbox.setRange(0.0, 1.0)
         self.spring_spinbox.setSingleStep(0.01)
         self.spring_spinbox.setValue(self.spring_value)
@@ -440,9 +443,9 @@ class SavePresetPopup(QWidget):
         preset_layout.addLayout(spring_layout)
 
         # Rigidity
-        rigidity_layout = QHBoxLayout()
-        rigidity_label = QLabel("Rigidity:")
-        self.rigidity_spinbox = QDoubleSpinBox()
+        rigidity_layout = QtWidgets.QHBoxLayout()
+        rigidity_label = QtWidgets.QLabel("Rigidity:")
+        self.rigidity_spinbox = QtWidgets.QDoubleSpinBox()
         self.rigidity_spinbox.setRange(0.0, 10.0)
         self.rigidity_spinbox.setSingleStep(0.01)
         self.rigidity_spinbox.setValue(self.rigidity_value)
@@ -451,9 +454,9 @@ class SavePresetPopup(QWidget):
         preset_layout.addLayout(rigidity_layout)
 
         # Decay
-        decay_layout = QHBoxLayout()
-        decay_label = QLabel("Decay:")
-        self.decay_spinbox = QDoubleSpinBox()
+        decay_layout = QtWidgets.QHBoxLayout()
+        decay_label = QtWidgets.QLabel("Decay:")
+        self.decay_spinbox = QtWidgets.QDoubleSpinBox()
         self.decay_spinbox.setSingleStep(0.01)
         self.decay_spinbox.setRange(0.0, 10.0)
         self.decay_spinbox.setValue(self.decay_value)
@@ -462,11 +465,11 @@ class SavePresetPopup(QWidget):
         preset_layout.addLayout(decay_layout)
 
         # Position
-        position_layout = QHBoxLayout()
-        position_label = QLabel('loc Pos (x,y,z):')
-        self.position_tx_spinbox = QDoubleSpinBox()
-        self.position_ty_spinbox = QDoubleSpinBox()
-        self.position_tz_spinbox = QDoubleSpinBox()
+        position_layout = QtWidgets.QHBoxLayout()
+        position_label = QtWidgets.QLabel('loc Pos (x,y,z):')
+        self.position_tx_spinbox = QtWidgets.QDoubleSpinBox()
+        self.position_ty_spinbox = QtWidgets.QDoubleSpinBox()
+        self.position_tz_spinbox = QtWidgets.QDoubleSpinBox()
         self.position_tx_spinbox.setMinimum(-999999)
         self.position_ty_spinbox.setMinimum(-999999)
         self.position_tz_spinbox.setMinimum(-999999)
@@ -481,10 +484,10 @@ class SavePresetPopup(QWidget):
         preset_layout.addLayout(position_layout)
 
         # Buttons
-        button_layout = QHBoxLayout()
-        confirm_button = QPushButton("Confirm")
+        button_layout = QtWidgets.QHBoxLayout()
+        confirm_button = QtWidgets.QPushButton("Confirm")
         confirm_button.clicked.connect(self.save_preset_pressed)
-        cancel_button = QPushButton("Cancel")
+        cancel_button = QtWidgets.QPushButton("Cancel")
         cancel_button.clicked.connect(self.close)
         button_layout.addWidget(confirm_button)
         button_layout.addWidget(cancel_button)
@@ -498,26 +501,28 @@ class SavePresetPopup(QWidget):
         '''
 
         # Create a vertical separator (QFrame)
-        self.separator = QFrame()
-        self.separator.setFrameShape(QFrame.VLine)  # Set to vertical line
-        self.separator.setFrameShadow(QFrame.Sunken)  # Set shadow for depth
+        self.separator = QtWidgets.QFrame()
+        # Set to vertical line
+        self.separator.setFrameShape(QtWidgets.QFrame.VLine)
+        # Set shadow for depth
+        self.separator.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.separator.setLineWidth(2)  # Set the line width
 
-        self.controllers_sets_panel_layout = QVBoxLayout()
-        self.list_of_selection_sets_layout = QVBoxLayout()
-        add_remove_ctl_set_layout = QHBoxLayout()
+        self.controllers_sets_panel_layout = QtWidgets.QVBoxLayout()
+        self.list_of_selection_sets_layout = QtWidgets.QVBoxLayout()
+        add_remove_ctl_set_layout = QtWidgets.QHBoxLayout()
         text = (
             'Create a set for each chain. Then select all the controllers '
             'of each chain and click on "sel" to add them to the set'
             )
-        controllers_sets_hint = QLabel(text)
+        controllers_sets_hint = QtWidgets.QLabel(text)
         controllers_sets_hint.setWordWrap(True)
-        self.add_ctl_set_button = QPushButton('Add set')
+        self.add_ctl_set_button = QtWidgets.QPushButton('Add set')
         self.add_ctl_set_button.clicked.connect(self.add_controller_set)
-        self.remove_ctl_set_button = QPushButton('Remove set')
+        self.remove_ctl_set_button = QtWidgets.QPushButton('Remove set')
         self.remove_ctl_set_button.clicked.connect(
             self.delete_last_controller_set_layout)
-        self.print_list = QPushButton('Print output')
+        self.print_list = QtWidgets.QPushButton('Print output')
         self.print_list.clicked.connect(self.get_selection_sets)
 
         self.controllers_sets_panel_layout.addWidget(controllers_sets_hint)
@@ -537,11 +542,11 @@ class SavePresetPopup(QWidget):
         '''
         Add a layout with set button and qline edit to hold the controllers
         '''
-        self.controller_set_layout = QHBoxLayout()
-        self.set_selected_ctl_button = QPushButton('Sel')
+        self.controller_set_layout = QtWidgets.QHBoxLayout()
+        self.set_selected_ctl_button = QtWidgets.QPushButton('Sel')
         self.set_selected_ctl_button.clicked.connect(
             self.add_current_selection)
-        self.selected_ctl_line_edit = QLineEdit()
+        self.selected_ctl_line_edit = QtWidgets.QLineEdit()
         self.controller_set_layout.addWidget(self.set_selected_ctl_button)
         self.controller_set_layout.addWidget(self.selected_ctl_line_edit)
         self.list_of_selection_sets_layout.addLayout(
@@ -601,7 +606,8 @@ class SavePresetPopup(QWidget):
 
             # Check if item is a layout
             layout_widget = item.layout()
-            if layout_widget and isinstance(layout_widget, QHBoxLayout):
+            condition = isinstance(layout_widget, QtWidgets.QHBoxLayout)
+            if layout_widget and condition:
                 layout_list.append(layout_widget)
 
         print('List of layout found are:', layout_list)
@@ -624,7 +630,7 @@ class SavePresetPopup(QWidget):
             widget = item.widget()   # Get the widget from the layout item
 
             # Check if the widget is a QLineEdit
-            if isinstance(widget, QLineEdit):
+            if isinstance(widget, QtWidgets.QLineEdit):
                 qlineedits.append(widget)  # Add the QLineEdit to the list
 
         return qlineedits
@@ -676,7 +682,7 @@ class SavePresetPopup(QWidget):
         body_part = self.body_part_line_edit.text()
 
         if character_name == EMPTY_LINE_TEXT:
-            QMessageBox.warning(
+            QtWidgets.QMessageBox.warning(
                 None,
                 "Invalid Name",
                 "No character name given. "
@@ -689,7 +695,7 @@ class SavePresetPopup(QWidget):
 
         if saved_names and not self.edit_mode:
             if body_part.lower() in [name.lower() for name in saved_names]:
-                QMessageBox.warning(
+                QtWidgets.QMessageBox.warning(
                     None,
                     "Name Taken",
                     "This name is already taken. "

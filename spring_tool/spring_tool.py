@@ -80,13 +80,18 @@ window.show()
 import sys
 
 from functools import wraps
-from PySide2 import QtWidgets, QtCore
-from PySide2.QtWidgets import (
-    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
-    QDoubleSpinBox, QSlider, QLabel, QComboBox, QListWidget, QAction, QMenu,
-    QCheckBox, QRadioButton)
-import maya.cmds as mc
+
 import maya.mel as mm
+import maya.cmds as mc
+
+if mc.about(apiVersion=True) <= 20250000:
+    from PySide2 import QtCore
+    from PySide2 import QtWidgets
+    from PySide2.QtWidgets import QAction
+else:
+    from PySide6 import QtCore
+    from PySide6 import QtWidgets
+    from PySide6.QtGui import QAction
 
 try:
     from spring_tool import presets
@@ -226,7 +231,7 @@ def get_opposite_ctl_list(list):
     return opposite_ctl_list
 
 
-class SpringToolWindow(QMainWindow):
+class SpringToolWindow(QtWidgets.QMainWindow):
 
     def __init__(
             self,
@@ -276,18 +281,19 @@ class SpringToolWindow(QMainWindow):
         '''
         Main part of the tool, left UI panel
         '''
-        central_widget = QWidget(self)
+        central_widget = QtWidgets.QWidget(self)
         self.setCentralWidget(central_widget)
 
-        self.main_split_layout = QHBoxLayout(central_widget)
-        self.main_layout = QVBoxLayout()
+        self.main_split_layout = QtWidgets.QHBoxLayout(central_widget)
+        self.main_layout = QtWidgets.QVBoxLayout()
 
-        self.radio_buttons_layout = QHBoxLayout()
-        self.rotation_mode_radio_button = QRadioButton('Rotation')
+        self.radio_buttons_layout = QtWidgets.QHBoxLayout()
+        self.rotation_mode_radio_button = QtWidgets.QRadioButton('Rotation')
         self.rotation_mode_radio_button.setChecked(True)
         self.rotation_mode_radio_button.toggled.connect(
             self.save_preferences_states)
-        self.translation_mode_radio_button = QRadioButton('Translation')
+        self.translation_mode_radio_button = QtWidgets.QRadioButton(
+            'Translation')
         self.translation_mode_radio_button.toggled.connect(
             self.save_preferences_states)
 
@@ -296,22 +302,22 @@ class SpringToolWindow(QMainWindow):
         self.radio_buttons_layout.addWidget(
             self.translation_mode_radio_button)
 
-        self.locators_button = QPushButton('1. Create Locator')
+        self.locators_button = QtWidgets.QPushButton('1. Create Locator')
         self.locators_button.clicked.connect(self.handle_locators_btn_clicked)
 
-        self.previz_button = QPushButton('2. Live preview')
+        self.previz_button = QtWidgets.QPushButton('2. Live preview')
         self.previz_button.clicked.connect(self.handle_previz_btn_clicked)
 
-        weight_layout = QHBoxLayout()
-        decay_layout = QHBoxLayout()
-        rigidity_layout = QHBoxLayout()
+        weight_layout = QtWidgets.QHBoxLayout()
+        decay_layout = QtWidgets.QHBoxLayout()
+        rigidity_layout = QtWidgets.QHBoxLayout()
 
-        spring_qlabel = QLabel('Spring')
-        self.spring_value_spinbox = QDoubleSpinBox()
+        spring_qlabel = QtWidgets.QLabel('Spring')
+        self.spring_value_spinbox = QtWidgets.QDoubleSpinBox()
         self.spring_value_spinbox.setRange(0.0, 1.0)
         self.spring_value_spinbox.setSingleStep(0.01)
         self.spring_value_spinbox.setValue(DEFAULT_SPRING_VALUE)
-        self.spring_value_qslider = QSlider(QtCore.Qt.Horizontal)
+        self.spring_value_qslider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.spring_value_qslider.setRange(0.0, 100.0)
         self.spring_value_qslider.setValue(DEFAULT_SPRING_VALUE*100)
         self.spring_value_spinbox.valueChanged.connect(
@@ -319,12 +325,12 @@ class SpringToolWindow(QMainWindow):
         self.spring_value_qslider.valueChanged.connect(
             self.slider_spring_value_changed)
 
-        rigidity_qlabel = QLabel('Rigidity')
-        self.rigidity_value_spinbox = QDoubleSpinBox()
+        rigidity_qlabel = QtWidgets.QLabel('Rigidity')
+        self.rigidity_value_spinbox = QtWidgets.QDoubleSpinBox()
         self.rigidity_value_spinbox.setRange(0.0, 10.0)
         self.rigidity_value_spinbox.setSingleStep(0.01)
         self.rigidity_value_spinbox.setValue(DEFAULT_RIGIDITY_VALUE)
-        self.rigidity_value_qslider = QSlider(QtCore.Qt.Horizontal)
+        self.rigidity_value_qslider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.rigidity_value_qslider.setRange(0.0, 100.0)
         self.rigidity_value_qslider.setValue(DEFAULT_RIGIDITY_VALUE*10)
         self.rigidity_value_spinbox.valueChanged.connect(
@@ -332,12 +338,12 @@ class SpringToolWindow(QMainWindow):
         self.rigidity_value_qslider.valueChanged.connect(
             self.rigidity_slider_value_changed)
 
-        decay_qlabel = QLabel('Decay')
-        self.decay_value_spinbox = QDoubleSpinBox()
+        decay_qlabel = QtWidgets.QLabel('Decay')
+        self.decay_value_spinbox = QtWidgets.QDoubleSpinBox()
         self.decay_value_spinbox.setValue(DEFAULT_DECAY_VALUE)
         self.decay_value_spinbox.setSingleStep(0.01)
         self.decay_value_spinbox.setRange(0.0, 10.0)
-        self.decay_value_slider = QSlider(QtCore.Qt.Horizontal)
+        self.decay_value_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.decay_value_slider.setRange(0.0, 100.0)
         self.decay_value_slider.setValue(12.0)
         self.decay_value_spinbox.valueChanged.connect(self.get_user_decay)
@@ -345,27 +351,28 @@ class SpringToolWindow(QMainWindow):
             self.slider_decay_value_changed
             )
 
-        bake_on_layer_option_layout = QHBoxLayout()
-        self.bake_on_layer_checkbox = QCheckBox('Bake on layers')
+        bake_on_layer_option_layout = QtWidgets.QHBoxLayout()
+        self.bake_on_layer_checkbox = QtWidgets.QCheckBox('Bake on layers')
         self.bake_on_layer_checkbox.stateChanged.connect(
             self.save_preferences_states
             )
 
-        self.merge_animation_layer_checkbox = QCheckBox('Merge layers')
+        self.merge_animation_layer_checkbox = QtWidgets.QCheckBox(
+            'Merge layers')
         self.merge_animation_layer_checkbox.stateChanged.connect(
             self.save_preferences_states
             )
 
-        bake_with_opposite_layout = QHBoxLayout()
-        self.bake_with_opposite_checkbox = QCheckBox('Bake opposite')
+        bake_with_opposite_layout = QtWidgets.QHBoxLayout()
+        self.bake_with_opposite_checkbox = QtWidgets.QCheckBox('Bake opposite')
         self.bake_with_opposite_checkbox.stateChanged.connect(
             self.save_preferences_states
             )
 
-        self.bake_button = QPushButton('3. Bake!')
+        self.bake_button = QtWidgets.QPushButton('3. Bake!')
         self.bake_button.clicked.connect(self.launch_bake)
 
-        self.remove_setup_button = QPushButton('Remove Setup')
+        self.remove_setup_button = QtWidgets.QPushButton('Remove Setup')
         self.remove_setup_button.clicked.connect(self.clear_all)
 
         weight_layout.addWidget(spring_qlabel)
@@ -403,23 +410,23 @@ class SpringToolWindow(QMainWindow):
         '''
         UI for the right panel of the tool
         '''
-        self.presets_main_layout = QVBoxLayout()
-        self.character_combo = QComboBox()
+        self.presets_main_layout = QtWidgets.QVBoxLayout()
+        self.character_combo = QtWidgets.QComboBox()
 
         self.character_combo.currentIndexChanged.connect(
             self.on_character_changed)
-        presets_refresh_button = QPushButton('Refresh')
+        presets_refresh_button = QtWidgets.QPushButton('Refresh')
         presets_refresh_button.clicked.connect(
             self.refresh_characters_combobox)
-        save_preset_button = QPushButton('Save Preset')
+        save_preset_button = QtWidgets.QPushButton('Save Preset')
         save_preset_button.clicked.connect(self.show_save_preset_popup)
         if self.lock_write_presets:
             save_preset_button.setDisabled(True)
 
-        self.body_parts_list_menu = QMenu()
+        self.body_parts_list_menu = QtWidgets.QMenu()
         # Handle right click on QMenuList item
         do_magic_action = QAction("Do Magic!", self)
-        self.body_parts_list = QListWidget()
+        self.body_parts_list = QtWidgets.QListWidget()
 
         self.body_parts_list.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.body_parts_list.customContextMenuRequested.connect(self.show_menu)

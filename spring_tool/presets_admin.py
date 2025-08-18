@@ -1,16 +1,21 @@
-from PySide2 import QtCore
-from PySide2.QtWidgets import (
-    QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
-    QTreeView)
-from PySide2.QtGui import QStandardItemModel, QStandardItem
+import json
+import maya.cmds as mc
+
+if mc.about(apiVersion=True) <= 20250000:
+    from PySide2 import QtCore
+    from PySide2 import QtWidgets
+    from PySide2 import QtGui
+else:
+    from PySide6 import QtGui
+    from PySide6 import QtCore
+    from PySide6 import QtWidgets
+
 from spring_tool.spring_tool import (
     TOOLNAME, maya_main_window)
 from spring_tool import presets
-import maya.cmds as mc
-import json
 
 
-class SpringToolPresetAdmin(QWidget):
+class SpringToolPresetAdmin(QtWidgets.QWidget):
     def __init__(
             self,
             parent=None,
@@ -50,10 +55,10 @@ class SpringToolPresetAdmin(QWidget):
         self.load_json_data()
 
         # Create QTreeView
-        self.tree_view = QTreeView(self)
+        self.tree_view = QtWidgets.QTreeView(self)
 
         # Create a model
-        self.model = QStandardItemModel()
+        self.model = QtGui.QStandardItemModel()
         self.model.setHorizontalHeaderLabels(['Name'])
 
         # Populate the model with top-level and second-level keys
@@ -70,7 +75,7 @@ class SpringToolPresetAdmin(QWidget):
             self.check_item_level)
 
         # Layout
-        self.qtree_layout = QVBoxLayout()
+        self.qtree_layout = QtWidgets.QVBoxLayout()
         self.qtree_layout.addWidget(self.tree_view)
         self.setLayout(self.qtree_layout)
 
@@ -86,7 +91,7 @@ class SpringToolPresetAdmin(QWidget):
         if isinstance(json_data, dict):
             # Add first-level keys
             for key, value in json_data.items():
-                first_level_item = QStandardItem(key)
+                first_level_item = QtGui.QStandardItem(key)
                 parent_item.appendRow(first_level_item)
 
                 # Add second-level keys if the value is a dictionary
@@ -96,7 +101,7 @@ class SpringToolPresetAdmin(QWidget):
     def add_second_level_keys(self, json_data, parent_item):
         if isinstance(json_data, dict):
             for key in json_data:
-                second_level_item = QStandardItem(key)
+                second_level_item = QtGui.QStandardItem(key)
                 parent_item.appendRow(second_level_item)
 
     def refresh_qtree(self):
@@ -118,22 +123,23 @@ class SpringToolPresetAdmin(QWidget):
         self.model.sort(0, QtCore.Qt.AscendingOrder)
 
     def load_preset_admin_ui(self):
-        layout = QVBoxLayout(self)
+        layout = QtWidgets.QVBoxLayout(self)
 
-        self.presets_main_layout = QVBoxLayout()
+        self.presets_main_layout = QtWidgets.QVBoxLayout()
         self.load_qtree_view()
         self.presets_main_layout.addWidget(self.tree_view)
-        presets_options_layout = QHBoxLayout()
-        self.refresh_button = QPushButton('Refresh')
+        presets_options_layout = QtWidgets.QHBoxLayout()
+        self.refresh_button = QtWidgets.QPushButton('Refresh')
         self.refresh_button.clicked.connect(self.refresh_qtree)
 
-        self.edit_preset_value_button = QPushButton('Edit Preset Values')
+        self.edit_preset_value_button = QtWidgets.QPushButton(
+            'Edit Preset Values')
         self.edit_preset_value_button.clicked.connect(
             self.edit_saved_preset_pressed)
         self.edit_preset_value_button.setEnabled(False)
-        edit_name_button = QPushButton('Edit Preset Name')
+        edit_name_button = QtWidgets.QPushButton('Edit Preset Name')
         edit_name_button.clicked.connect(self.rename_presset_pressed)
-        remove_preset_button = QPushButton('Remove')
+        remove_preset_button = QtWidgets.QPushButton('Remove')
         remove_preset_button.clicked.connect(self.remove_selected_preset)
         presets_options_layout.addWidget(self.edit_preset_value_button)
         presets_options_layout.addWidget(edit_name_button)
