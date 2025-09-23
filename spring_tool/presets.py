@@ -4,13 +4,11 @@ import re
 from pprint import pprint
 import maya.cmds as mc
 
-if mc.about(apiVersion=True) <= 20250000:
-    from PySide2 import QtCore
-    from PySide2 import QtWidgets
-else:
-    from PySide6 import QtCore
-    from PySide6 import QtWidgets
-
+try:
+    from PySide6 import QtCore, QtWidgets
+except ImportError:
+    # Fall back to PySide2 if PySide6 is not available
+    from PySide2 import QtCore, QtWidgets
 
 EMPTY_LINE_TEXT = '----------'
 ADD_NEW_CHARACTER_TEXT = ' - Add new character -'

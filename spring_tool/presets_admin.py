@@ -1,14 +1,11 @@
 import json
 import maya.cmds as mc
 
-if mc.about(apiVersion=True) <= 20250000:
-    from PySide2 import QtCore
-    from PySide2 import QtWidgets
-    from PySide2 import QtGui
-else:
-    from PySide6 import QtGui
-    from PySide6 import QtCore
-    from PySide6 import QtWidgets
+try:
+    from PySide6 import QtCore, QtWidgets, QtGui
+except ImportError:
+    # Fall back to PySide2 if PySide6 is not available
+    from PySide2 import QtCore, QtWidgets, QtGui
 
 from spring_tool.spring_tool import (
     TOOLNAME, maya_main_window)

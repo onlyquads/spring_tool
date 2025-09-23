@@ -84,14 +84,13 @@ from functools import wraps
 import maya.mel as mm
 import maya.cmds as mc
 
-if mc.about(apiVersion=True) <= 20250000:
-    from PySide2 import QtCore
-    from PySide2 import QtWidgets
-    from PySide2.QtWidgets import QAction
-else:
-    from PySide6 import QtCore
-    from PySide6 import QtWidgets
+try:
+    from PySide6 import QtCore, QtWidgets
     from PySide6.QtGui import QAction
+except ImportError:
+    # Fall back to PySide2 if PySide6 is not available
+    from PySide2 import QtCore, QtWidgets
+    from PySide2.QtWidgets import QAction
 
 try:
     from spring_tool import presets
@@ -151,6 +150,22 @@ def maya_main_window():
         if obj.objectName() == 'MayaWindow':
             return obj
     raise RuntimeError('Could not find MayaWindow instance')
+
+
+def get_vp_evaluation_mode():
+    mel_command = 'evaluationManager -query -mode;'
+    evaluation_mode = mm.eval(mel_command)
+    return evaluation_mode
+
+
+def switch_back_vp_eval(vp_eval):
+    if vp_eval[0] == "parallel":
+        mm.eval('evaluationManager -mode "parallel";')
+        return
+    if vp_eval[0] == "serial":
+        mm.eval('evaluationManager -mode "serial";')
+        return
+    mm.eval('evaluationManager -mode "off";')
 
 
 def disable_viewport(func):
@@ -348,26 +363,22 @@ class SpringToolWindow(QtWidgets.QMainWindow):
         self.decay_value_slider.setValue(12.0)
         self.decay_value_spinbox.valueChanged.connect(self.get_user_decay)
         self.decay_value_slider.valueChanged.connect(
-            self.slider_decay_value_changed
-            )
+            self.slider_decay_value_changed)
 
         bake_on_layer_option_layout = QtWidgets.QHBoxLayout()
         self.bake_on_layer_checkbox = QtWidgets.QCheckBox('Bake on layers')
         self.bake_on_layer_checkbox.stateChanged.connect(
-            self.save_preferences_states
-            )
+            self.save_preferences_states)
 
         self.merge_animation_layer_checkbox = QtWidgets.QCheckBox(
             'Merge layers')
         self.merge_animation_layer_checkbox.stateChanged.connect(
-            self.save_preferences_states
-            )
+            self.save_preferences_states)
 
         bake_with_opposite_layout = QtWidgets.QHBoxLayout()
         self.bake_with_opposite_checkbox = QtWidgets.QCheckBox('Bake opposite')
         self.bake_with_opposite_checkbox.stateChanged.connect(
-            self.save_preferences_states
-            )
+            self.save_preferences_states)
 
         self.bake_button = QtWidgets.QPushButton('3. Bake!')
         self.bake_button.clicked.connect(self.launch_bake)
@@ -475,8 +486,7 @@ class SpringToolWindow(QtWidgets.QMainWindow):
         if mc.optionVar(exists=ROTATION_MODE_OPTVAR):
             rotation_mode_state = mc.optionVar(q=ROTATION_MODE_OPTVAR)
             self.rotation_mode_radio_button.setChecked(
-                bool(rotation_mode_state)
-                )
+                bool(rotation_mode_state))
         else:
             self.rotation_mode_radio_button.setChecked(False)
 
@@ -845,20 +855,6 @@ class SpringToolWindow(QtWidgets.QMainWindow):
         weight = max(0, min(1, weight))
         return weight
 
-    def get_vp_evaluation_mode(self):
-        mel_command = 'evaluationManager -query -mode;'
-        evaluation_mode = mm.eval(mel_command)
-        return evaluation_mode
-
-    def switch_back_vp_eval(self, vp_eval):
-        if vp_eval[0] == "parallel":
-            mm.eval('evaluationManager -mode "parallel";')
-            return
-        if vp_eval[0] == "serial":
-            mm.eval('evaluationManager -mode "serial";')
-            return
-        mm.eval('evaluationManager -mode "off";')
-
     def get_node_shortname(self, node):
         '''
         Return node name without any namespace
@@ -870,7 +866,7 @@ class SpringToolWindow(QtWidgets.QMainWindow):
         self,
         rig_ctl_list,
         mode=DEFAULT_SPRING_MODE,
-        spring_weight=None,
+        spring_weight=None
             ):
 
         mc.undoInfo(ock=True)
@@ -901,8 +897,7 @@ class SpringToolWindow(QtWidgets.QMainWindow):
             # Setup for translation mode
             parent_constraint = mc.parentConstraint(
                 self.rig_ctl_list[0],
-                ctl_locator
-                )
+                ctl_locator)
             add_bool_attr(parent_constraint[0])
             self.bake_rot_trans_with_mel(ctl_locator)
             mc.delete(parent_constraint)
@@ -910,8 +905,7 @@ class SpringToolWindow(QtWidgets.QMainWindow):
             orig_sel_constraint = mc.parentConstraint(
                 ctl_locator,
                 particle_system[0],
-                mo=False
-                )
+                mo=False)
             add_bool_attr(orig_sel_constraint[0])
             mc.delete(orig_sel_constraint)
 
@@ -923,8 +917,7 @@ class SpringToolWindow(QtWidgets.QMainWindow):
             orig_sel_constraint = mc.parentConstraint(
                 self.aim_loc,
                 ctl_locator,
-                mo=False
-                )
+                mo=False)
             add_bool_attr(orig_sel_constraint[0])
             self.bake_rot_trans_with_mel(ctl_locator)
             mc.delete(orig_sel_constraint)
@@ -933,8 +926,7 @@ class SpringToolWindow(QtWidgets.QMainWindow):
             parent_constraint = mc.parentConstraint(
                 ctl_locator,
                 PARTICLE_NAME,
-                mo=False
-                )
+                mo=False)
             add_bool_attr(parent_constraint[0])
             mc.delete(parent_constraint)
 
@@ -1103,8 +1095,8 @@ class SpringToolWindow(QtWidgets.QMainWindow):
             print('--- BAKING PLEASE WAIT ---')
             spring_weight = self.spring_value_spinbox.value()
             decay = self.get_user_decay()
-            vp_eval = self.get_vp_evaluation_mode()
-            self.switch_back_vp_eval('off')
+            vp_eval = get_vp_evaluation_mode()
+            switch_back_vp_eval('off')
             selected_rig_ctl = self.rig_ctl_list
             for i in range(len(selected_rig_ctl)):
                 # BAKING FIRST CTL OF THE CHAIN
@@ -1145,7 +1137,7 @@ class SpringToolWindow(QtWidgets.QMainWindow):
                 mc.evalDeferred(self.launch_for_opposite, lowestPriority=True)
 
             mc.warning('Spring COMPLETED !')
-            self.switch_back_vp_eval(vp_eval)
+            switch_back_vp_eval(vp_eval)
             mc.undoInfo(cck=True)
 
         except Exception as e:
