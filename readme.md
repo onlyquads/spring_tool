@@ -16,7 +16,7 @@ The Spring Tool is an auto spring simulation script for Maya, inspired by Luismi
 [Watch a Quick Tutorial](https://garcia-nicolas.com/download/3147/?tmstv=1713513016&v=3148)
 
 ### Compatibility:
-Tested on Maya 2022, 2023
+Tested on Maya 2022, 2023, 2024, 2025
 
 ## How to use:
 
